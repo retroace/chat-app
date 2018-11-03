@@ -64,7 +64,6 @@ a{
 }
 .section{
 	position: relative;
-	padding: 10px 0px;
 	width: 100%;
 }
 #chat-message{
@@ -76,6 +75,8 @@ a{
 
 #chat-message > p{
 	padding: 5px 0;
+    display: flex;
+    flex-direction: row;
 }
 
 #chat-message > p > span{
@@ -84,6 +85,7 @@ a{
 	padding: 5px 8px 6px;
 	border-radius: 20px;
 	max-width: 200px;
+    line-height: 30px;
 }
 
 .text-primary{
@@ -92,12 +94,18 @@ a{
 
 #chat-message > p.user{
 	text-align: right;
+	justify-content: flex-end;	
 	padding:3px 0px;
 }
-
+#chat-message > p > span.username{
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    max-width: fit-content;
+    color: #3e3a3af2 !important;
+}
 #chat-message > p.user > span{
 	color: #ffffff;
-	line-height: 30px;
 	box-shadow: 0px 10px 27px 13px #3578e5;
     background: #3578e5;
 
@@ -196,4 +204,8 @@ li.chat-room-list:hover{
 }
 .d-none{
 	display: none;
+}
+.flex-center{
+    display: flex;
+	justify-content: center;
 }

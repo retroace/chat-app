@@ -25,7 +25,7 @@
 
 		<div class="section bg-light v-all" id="chat-section">
 			<div class="absolute v-all w-100 overlay all-0 f-column" id="chat-overlay">
-				<div class="vertical-center">		
+				<div class="vertical-center flex-center">		
 					<form id="name-form" action="" accept-charset="utf-8" class="d-flex">
 						<div class="from-group">
 							<input type="text" placeholder="Enter Your Name" id="name" class="w-100 py-2" name="name">
@@ -42,77 +42,85 @@
 				
 				
 			<form id="chat-form" action="" method="" class="absolute-bottom w-100" accept-charset="utf-8">
-				<input type="text" autofocus class="absolute-bottom w-100 py-2" id="m">
+				<!-- <input type="text" placeholder="Enter a message" class="absolute-bottom w-100 py-2" id="m"> -->
+				<textarea name="m" class="absolute-bottom w-100 py-2" id="m" placeholder="Enter a message"></textarea>
 			</form>
 		</div>
 
 	</div>	
 	<script src="/socket.io/socket.io.js"></script>
 	<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+	<script src="/page/js/chat-index.js"></script>
 	<script>
-	$('#name-form').submit(function(e){
-		e.preventDefault();
-		$('#nameSubmit').click();
-		return false;
-	});
+		// $('#name-form').submit(function(e){
+		// 	e.preventDefault();
+		// 	$('#nameSubmit').click();
+		// 	return false;
+		// });
 
-	$('#clear-chat').click(function(e){
-		$('#chat-message').text(" ");
-	});
+		// $('#clear-chat').click(function(e){
+		// 	$('#chat-message').text(" ");
+		// });
 
-		$('#nameSubmit').click(function(e){
-			e.preventDefault();
-			var name = $('#name').val();
-			var nameLength = $('#name').val().length; 
+		// $('#nameSubmit').click(function(e){
+		// 	e.preventDefault();
+		// 	var name = $('#name').val();
+		// 	var nameLength = $('#name').val().length; 
 			
-			console.log(name+ " is of char "+ nameLength);
-			if (nameLength > 4) {
-				$('#name').attr('value',name);
-				$('#name').attr('type','hidden');
-				$('#chat-overlay').hide();
-			}else{
-				var error = "<p class='name-error'>Name must be greater than four char</p>"+ nameLength;
-				if ($('.name-error').length == 0) {
-					$(error).appendTo('#form-group');
-				}
-			}
-		})
+		// 	console.log(name+ " is of char "+ nameLength);
+		// 	if (nameLength > 4) {
+		// 		$('#name').attr('value',name);
+		// 		$('#name').attr('type','hidden');
+		// 		$('#chat-overlay').hide();
+		// 	}else{
+		// 		var error = "<p class='name-error'>Name must be greater than four char</p>"+ nameLength;
+		// 		if ($('.name-error').length == 0) {
+		// 			$(error).appendTo('#form-group');
+		// 		}
+		// 	}
+		// })
 
-		var socket = io();
+		// var socket = io();
 
-		$('#chat-form').submit(function(e){
-			e.preventDefault();
+		// $('#chat-form').submit(function(e){
+		// 	e.preventDefault();
 
-			var msg = $('#m').val();
+		// 	var msg = $('#m').val();
+		// 	console.log(msg);
+
+		// 	if (msg.trim().length == 0 ) {
+		// 		$('#m').attr('autofocus','autofocus');
+		// 		$('#m').val('');
+		// 		return false;
+		// 	}
+		// 	socket.emit('chat message', msg,$('#name').val());
+		// 	var message = "<p class='user'><span>"+msg+"</span></p>";
+		// 	$(message).appendTo('#chat-message');
 			
-			socket.emit('chat message', msg,$('#name').val());
-			var message = "<p class='user'><span>"+msg+"</span></p>";
-			$(message).appendTo('#chat-message');
+		// 	$('#m').val('');
 			
-			$('#m').val('');
+		// 	// Scrolling to the bottom of the chat
+		// 	var chatMessage = document.getElementById('chat-message');
+		// 	chatMessage.scrollTo(0,chatMessage.scrollHeight);
 			
-			// Scrolling to the bottom of the chat
-			var chatMessage = document.getElementById('chat-message');
-			chatMessage.scrollTo(0,chatMessage.scrollHeight);
+		// 	return false;
+		// });
+
+		// socket.on('chat message', function(msg,user){
+		// 	console.log(msg);
 			
-			return false;
-		});
+		// 	var message = "<p>"+user+" says:<span>"+msg+"</span></p>";
+		// 	$(message).appendTo('#chat-message');
 
-		socket.on('chat message', function(msg,user){
-			console.log(msg);
-			
-			var message = "<p>"+user+" says:<span>"+msg+"</span></p>";
-			$(message).appendTo('#chat-message');
+		// 	// Scrolling to the bottom of the chat
+		// 	var chatMessage = document.getElementById('chat-message');
+		// 	chatMessage.scrollTo(0,chatMessage.scrollHeight);
 
-			// Scrolling to the bottom of the chat
-			var chatMessage = document.getElementById('chat-message');
-			chatMessage.scrollTo(0,chatMessage.scrollHeight);
+		// });
 
-		});
-
-		socket.on('newUser', function(){
-			socket.broadcast.emit('User connected');
-		});
+		// socket.on('newUser', function(){
+		// 	socket.broadcast.emit('User connected');
+		// });
 
 
 	</script>
