@@ -25,6 +25,7 @@
 
 		<div class="section bg-light v-all" id="chat-section">
 			<div class="absolute v-all w-100 overlay all-0 f-column" id="chat-overlay">
+				<!-- Name form for chat -->
 				<div class="vertical-center flex-center">		
 					<form id="name-form" action="" accept-charset="utf-8" class="d-flex">
 						<div class="from-group">
@@ -33,22 +34,31 @@
 						<button type="submit" class="py-2" id="nameSubmit">Submit</button>
 					</form>
 				</div>
+
 			</div>
-			
-			<p class="w-100 bg-white border-black mb-2 justify-content-between"><span class="py-2" id="chat-container-title">Say Hi in chat</span> <span class="clickable px-2 py-2 text-primary" id="clear-chat">Clear Chat</span></p> 
+
+			<!-- Chat title -->
+			<p class="w-100 bg-white border-black mb-2 justify-content-between">
+				<span class="py-2" id="chat-container-title">Say Hi in chat</span> 
+				<span class="clickable px-2 py-2 text-primary" id="clear-chat">Clear Chat</span>
+			</p> 
+
+			<!-- Chat message field -->
 			<div id="chat-message">
 			    
 			</div>
 				
-				
-			<form id="chat-form" action="" method="" class="absolute-bottom w-100" accept-charset="utf-8">
-				<textarea name="m" rows="1" class="absolute-bottom w-100 py-2" id="m" placeholder="Enter a message"></textarea>
-			</form>
+			<!-- Chat message field -->
+			<div  class="absolute-bottom w-100">
+				<form id="chat-form" action="" method="" accept-charset="utf-8">
+					<textarea name="m" rows="1" class="absolute-bottom w-100 py-2" id="m" placeholder="Enter a message"></textarea>
+				</form>
+			</div>
 		</div>
 
 	</div>	
-	<script src="/socket.io/socket.io.js"></script>
 	<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
 	<script src="/page/js/chat-index.js"></script>
 </body>
 </html>
