@@ -3,10 +3,12 @@
 <head>
 	<title>Document is easy</title>
 	<link rel="stylesheet" type="text/css" href="/page/css/style.css">
+	<link rel="stylesheet" type="text/css" href="/page/css/cssemoticons.css">
+	<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <body>
 	<div class="container">
-		<div class="section" id="chat-lists">
+		<div class="section v-all" id="chat-lists">
 			<div class="jumbotron">
 				<h1>Welcome to RTCS</h1>
 				<p>Take a look at our top chat sites and join/create one of the room. </p>
@@ -20,6 +22,7 @@
 			    <li class="chat-room-list"><a class="chat-room w-100" href="/chat/room1">Room 1</a></li>
 			    <li class="chat-room-list"><a class="chat-room w-100" href="/chat/room1">Coders</a></li>
 			</ul>
+			<p class="w-100" id="hide-sidebar">Hide Sidebar</p>
 		</div>
 
 
@@ -38,10 +41,15 @@
 			</div>
 
 			<!-- Chat title -->
-			<p class="w-100 bg-white border-black mb-2 justify-content-between">
-				<span class="py-2" id="chat-container-title">Say Hi in chat</span> 
-				<span class="clickable px-2 py-2 text-primary" id="clear-chat">Clear Chat</span>
-			</p> 
+			<div class="w-100 bg-white border-black mb-2 justify-content-between">
+				<div class="py-2 px-2">
+					<span id="chat-container-title">Say Hi in chat</span> 
+				</div>
+				<div class="user-action">
+					<i class="fa fa-beer action-beer fa-2x icon-padding clickable"></i>
+					<i class="fa fa-window-close-o icon-padding clickable fa-2x" id="clear-chat"></i> 
+				</div>
+			</div> 
 
 			<!-- Chat message field -->
 			<div id="chat-message">
@@ -51,7 +59,7 @@
 			<!-- Chat message field -->
 			<div  class="absolute-bottom w-100">
 				<form id="chat-form" action="" method="" accept-charset="utf-8">
-					<textarea name="m" rows="1" class="absolute-bottom w-100 py-2" id="m" placeholder="Enter a message"></textarea>
+					<textarea name="m" rows="1" class="absolute-bottom w-100 py-2 px-2" id="m" placeholder="Enter a message"></textarea>
 				</form>
 			</div>
 		</div>
@@ -59,6 +67,7 @@
 	</div>	
 	<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
 	<script src="/socket.io/socket.io.js"></script>
+	<script src="/page/js/cssemoticons.min.js"></script>
 	<script src="/page/js/chat-index.js"></script>
 </body>
 </html>
