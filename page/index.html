@@ -34,9 +34,9 @@
 					</form>
 				</div>
 			</div>
-
-			<p class="w-100 bg-white border-black mb-2">Say Hi in chat</p> 
-			<div id="messages">
+			
+			<p class="w-100 bg-white border-black mb-2 justify-content-between"><span class="py-2">Say Hi in chat</span> <span class="clickable px-2 py-2 text-primary" id="clear-chat">Clear Chat</span></p> 
+			<div id="chat-message">
 			    
 			</div>
 				
@@ -49,61 +49,70 @@
 	</div>	
 	<script src="/socket.io/socket.io.js"></script>
 	<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
-	<script src="/page/js/chat-index.js"><script>
 	<script>
-		$('#name-form').submit(function(e){
-	e.preventDefault();
-	$('#nameSubmit').click();
-	return false;
-});
+	$('#name-form').submit(function(e){
+		e.preventDefault();
+		$('#nameSubmit').click();
+		return false;
+	});
 
-$('#nameSubmit').click(function(e){
-	e.preventDefault();
-	var name = $('#name').val();
-	var nameLength = $('#name').val().length; 
-	
-	console.log(name+ " is of char "+ nameLength);
-	if (nameLength > 4) {
-		$('#name').attr('value',name);
-		$('#name').attr('type','hidden');
-		$('#chat-overlay').hide();
-	}else{
-		var error = "<p class='name-error'>Name must be greater than four char</p>"+ nameLength;
-		if ($('.name-error').length == 0) {
-			$(error).appendTo('#form-group');
-		}
-	}
-})
+	$('#clear-chat').click(function(e){
+		$('#chat-message').text(" ");
+	});
 
-var socket = io();
+		$('#nameSubmit').click(function(e){
+			e.preventDefault();
+			var name = $('#name').val();
+			var nameLength = $('#name').val().length; 
+			
+			console.log(name+ " is of char "+ nameLength);
+			if (nameLength > 4) {
+				$('#name').attr('value',name);
+				$('#name').attr('type','hidden');
+				$('#chat-overlay').hide();
+			}else{
+				var error = "<p class='name-error'>Name must be greater than four char</p>"+ nameLength;
+				if ($('.name-error').length == 0) {
+					$(error).appendTo('#form-group');
+				}
+			}
+		})
 
-$('#chat-form').submit(function(e){
-	e.preventDefault();
+		var socket = io();
 
-	var msg = $('#m').val();
-	
-	socket.emit('chat message', msg,$('#name').val());
-	var message = "<p class='user'><span>"+msg+"</span></p>";
-	$('#messages').append(message);
-	
-	msg.val('');
-	window.scrollTo(0,document.body.scrollHeight);
-	
-	return false;
-});
+		$('#chat-form').submit(function(e){
+			e.preventDefault();
 
-socket.on('chat message', function(msg,user){
-	console.log(msg);
-	
-	var message = "<p>"+user+" says:<span>"+msg+"</span></p>";
-	$('#messages').append(message);
-	
-	window.scrollTo(0,document.body.scrollHeight);
-});
+			var msg = $('#m').val();
+			
+			socket.emit('chat message', msg,$('#name').val());
+			var message = "<p class='user'><span>"+msg+"</span></p>";
+			$(message).appendTo('#chat-message');
+			
+			$('#m').val('');
+			
+			// Scrolling to the bottom of the chat
+			var chatMessage = document.getElementById('chat-message');
+			chatMessage.scrollTo(0,chatMessage.scrollHeight);
+			
+			return false;
+		});
 
-socket.on('newUser', function(){
-	socket.broadcast.emit('User connected');
-});
+		socket.on('chat message', function(msg,user){
+			console.log(msg);
+			
+			var message = "<p>"+user+" says:<span>"+msg+"</span></p>";
+			$(message).appendTo('#chat-message');
+
+			// Scrolling to the bottom of the chat
+			var chatMessage = document.getElementById('chat-message');
+			chatMessage.scrollTo(0,chatMessage.scrollHeight);
+
+		});
+
+		socket.on('newUser', function(){
+			socket.broadcast.emit('User connected');
+		});
 
 
 	</script>

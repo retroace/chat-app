@@ -86,6 +86,10 @@ a{
 	max-width: 200px;
 }
 
+.text-primary{
+	color: #3578e5;
+}
+
 #chat-message > p.user{
 	text-align: right;
 	padding:3px 0px;
@@ -98,7 +102,17 @@ a{
     background: #3578e5;
 
 }
-
+.justify-content-between{
+	display: flex;
+	justify-content: space-between;
+}
+.clickable{
+	cursor: pointer;
+}
+.px-2{
+	padding-left: 10px;
+	padding-right: 10px;
+}
 .clear{
 	overflow: auto;
 }
