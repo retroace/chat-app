@@ -5,77 +5,106 @@
 	<link rel="stylesheet" type="text/css" href="/page/css/style.css">
 </head>
 <body>
-	
-	<div class="title">
-		<p>A simple chat app on NodeJs And Socket IO</p>
-	</div>
-	
-	<ul id="messages"></ul>
-	<div class="scroll"></div>
-	<div class="name fixed-center" id="name-container">
-		<div class="container bg-light">
-					
-			<p>Enter your name: </p>
-			<form action="" method="post" id="name-form" accept-charset="utf-8">
-				<div class="form-group">
-					<input type="text" id="name" name="name" placeholder="Ram..">
-					<button id="nameSubmit" type="button">Keep my name</button>
-				</div>
-			</form>
-					
+	<div class="container">
+		<div class="section" id="chat-lists">
+			<div class="jumbotron">
+				<h1>Welcome to RTCS</h1>
+				<p>Take a look at our top chat sites and join/create one of the room. </p>
+				<p>And remember to love <strong>spring</strong>. We all love spring and so should you</p>
+				<p class="text-success mt-2">Currently online:</p>
+			</div>
+			<div class="mt-2"></div>
+			<p class="title">Chat rooms</p>
+			<ul class="list-items">
+			    <li class="chat-room-list"><a class="chat-room w-100" href="/chat/room1">Global Chat</a></li>
+			    <li class="chat-room-list"><a class="chat-room w-100" href="/chat/room1">Room 1</a></li>
+			    <li class="chat-room-list"><a class="chat-room w-100" href="/chat/room1">Coders</a></li>
+			</ul>
 		</div>
-	</div>
-		
-	<form action="" id="chat-form">
-		<input id="m" autocomplete="off" /><button>Send</button>
-	</form>
-	
 
+
+		<div class="section bg-light v-all" id="chat-section">
+			<div class="absolute v-all w-100 overlay all-0 f-column" id="chat-overlay">
+				<div class="vertical-center">		
+					<form id="name-form" action="" accept-charset="utf-8" class="d-flex">
+						<div class="from-group">
+							<input type="text" placeholder="Enter Your Name" id="name" class="w-100 py-2" name="name">
+						</div>
+						<button type="submit" class="py-2" id="nameSubmit">Submit</button>
+					</form>
+				</div>
+			</div>
+
+			<p class="w-100 bg-white border-black mb-2">Say Hi in chat</p> 
+			<div id="messages">
+			    
+			</div>
+				
+				
+			<form id="chat-form" action="" method="" class="absolute-bottom w-100" accept-charset="utf-8">
+				<input type="text" autofocus class="absolute-bottom w-100 py-2" id="m">
+			</form>
+		</div>
+
+	</div>	
 	<script src="/socket.io/socket.io.js"></script>
 	<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
-
+	<script src="/page/js/chat-index.js"><script>
 	<script>
-		
 		$('#name-form').submit(function(e){
-			e.preventDefault();
-			$('#nameSubmit').click();
-		});
-		$('#nameSubmit').click(function(e){
-			e.preventDefault();
-			var name = $('#name').val();
-			var nameLength = $('#name').val().length; 
-			
-			console.log(name+ " is of char "+ nameLength);
-			if (nameLength > 4) {
-				$('#name').attr('value',name);
-				$('#name').attr('type','hidden');
-				$('#name-container').hide();
-			}else{
-				var error = "<p class='name-error'>Name must be greater than four char</p>"+ nameLength;
-				if ($('.name-error').length == 0) {
-					$(error).appendTo('#form-group');
-				}
-			}
-		})
+	e.preventDefault();
+	$('#nameSubmit').click();
+	return false;
+});
 
-		var socket = io();
-		$('#chat-form').submit(function(){
-			socket.emit('chat message', $('#m').val(),$('#name').val());
-			$('#m').val('');
-			window.scrollTo(0,document.body.scrollHeight);
-			return false;
-		});
-		
-		socket.on('chat message', function(msg,user){
-			console.log(msg);
-			var message = "<li>"+user+" says: <strong>"+msg+"</strong></li>";
-			$('#messages').append(message);
-			window.scrollTo(0,document.body.scrollHeight);
-		});
+$('#nameSubmit').click(function(e){
+	e.preventDefault();
+	var name = $('#name').val();
+	var nameLength = $('#name').val().length; 
+	
+	console.log(name+ " is of char "+ nameLength);
+	if (nameLength > 4) {
+		$('#name').attr('value',name);
+		$('#name').attr('type','hidden');
+		$('#chat-overlay').hide();
+	}else{
+		var error = "<p class='name-error'>Name must be greater than four char</p>"+ nameLength;
+		if ($('.name-error').length == 0) {
+			$(error).appendTo('#form-group');
+		}
+	}
+})
 
-		socket.on('newUser', function(){
-			socket.broadcast.emit('User connected');
-		});
+var socket = io();
+
+$('#chat-form').submit(function(e){
+	e.preventDefault();
+
+	var msg = $('#m').val();
+	
+	socket.emit('chat message', msg,$('#name').val());
+	var message = "<p class='user'><span>"+msg+"</span></p>";
+	$('#messages').append(message);
+	
+	msg.val('');
+	window.scrollTo(0,document.body.scrollHeight);
+	
+	return false;
+});
+
+socket.on('chat message', function(msg,user){
+	console.log(msg);
+	
+	var message = "<p>"+user+" says:<span>"+msg+"</span></p>";
+	$('#messages').append(message);
+	
+	window.scrollTo(0,document.body.scrollHeight);
+});
+
+socket.on('newUser', function(){
+	socket.broadcast.emit('User connected');
+});
+
 
 	</script>
 </body>

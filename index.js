@@ -26,7 +26,7 @@ io.on('connection', function(socket){
 
 	// Emitted event on chat form submittion
 	socket.on('chat message', function(msg,user){
-		io.emit('chat message', msg , user);
+		socket.broadcast.emit('chat message', msg , user);
 
 	});
 });
