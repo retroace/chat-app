@@ -62,10 +62,17 @@ io.on('connection', function(socket){
 	});
 
 	socket.on('newUser',function(user){
-		socket.username = user;
-		usersDetail.push(user);
+		var userDetail = {
+			id: user.id,
+			name: user.name
+		};
 
-		socket.broadcast.emit('newUserConnected', user+" has connected to chat");
+		socket.id = user;
+		socket.username = user;
+
+		usersDetail.push(userDetail);
+
+		socket.broadcast.emit('newUserConnected', socket.username + " has connected to chat");
 		io.emit('totalUsers',usersDetail.length);
 		
 		console.log("Users : "+usersDetail);
@@ -85,7 +92,19 @@ io.on('connection', function(socket){
 		
 		console.log('user disconnected '+ socket.username);
 		
-		usersDetail.pop(socket.username);
+		for (var i = 0; i < usersDetail.length; i++) {
+			if(usersDetail[i].name == socket.username )
+			{
+				usersDetail.pop(i);
+			}
+		}
+
+		var totalUsers = usersDetail.filter(function (el) {
+		  return el != null;
+		});
+		usersDetail = totalUsers;
+		totalUsers = null;
+
 		io.emit('totalUsers',usersDetail);
 		
 
@@ -99,12 +118,33 @@ io.on('connection', function(socket){
 	});
 
 	// Emitted event on chat form submittion
-	socket.on('chat message', function(msg,user){
+	socket.on('chat message', function(msg){
 		if (currentRoom == "") {
-			socket.broadcast.emit('chat message', msg , user);		
+			socket.broadcast.emit('chat message', msg);		
 		}else{
-			socket.broadcast.to(currentRoom).emit('chat message', msg , user);
+			socket.broadcast.to(currentRoom).emit('chat message', msg , socket.username);
 		}
+	});
+
+	socket.on('register',function(user){
+		var user = JSON.parse(user);
+		socket.username = user.name;
+		var userIsInArray = false;
+
+		for (var i = 0; i < usersDetail.length; i++) {
+			if (usersDetail[i].id == user.id) {
+				userIsInArray = true;
+			}
+		}
+
+		if (userIsInArray == false) {
+			usersDetail.push(user);
+		}
+		
+		io.emit('totalUsers',usersDetail.length);
+		console.dir(usersDetail);
+		console.log('On Register user: detail '+ usersDetail);
+
 	});
 });
 
