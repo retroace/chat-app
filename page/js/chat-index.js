@@ -154,6 +154,10 @@ socket.on('newUserConnected', function(data){
 socket.on('userAction',function(msg,user){
 	var message = "<p class='action'>"+msg+"</p>";
 	$(message).appendTo('#chat-message');
+
+	// Scrolling to the bottom of the chat
+	var chatMessage = document.getElementById('chat-message');
+	chatMessage.scrollTo(0,chatMessage.scrollHeight);
 });
 
 $('#create-room').submit(function(e){
