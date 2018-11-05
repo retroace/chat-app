@@ -55,21 +55,35 @@ if (typeof(chatData) != 'undefined' && chatData != null) {
 			// Hiding chat overlay asking name
 			$('#chat-overlay').hide();
 			
-			// User generated value
-			user.id = Math.random().toString(36).substring(3,16) + +new Date;
-			user.name = name.val();
+			var isUsernameAvaiable = true;
+			
+			if (isUsernameAvaiable) {
+				// User generated value
+				user.id = Math.random().toString(36).substring(3,16) + +new Date;
+				user.name = name.val();
 
-			setDataInBrowser(user);
+				setDataInBrowser(user);
 
-			// hiding name and setting type to hidden
-			name.attr('value',name);
-			name.attr('type','hidden');
+				// hiding name and setting type to hidden
+				name.attr({
+					'value': name,
+					type: 'hidden'
+				});
 
-			socket.emit('newUser',user.name);
-	
-			$('#m').attr('placeholder','Enter a message '+ user.name);
-	
-			$('#chat-container-title').text(user.name+ " has connected to chat").css('color','green');
+				socket.emit('newUser',user.name);
+		
+				$('#m').attr('placeholder','Enter a message '+ user.name);
+		
+				$('#chat-container-title').text(user.name+ " has connected to chat").css('color','green');
+				
+			}else{
+				var error = "<p class='text-error'>Username already exists</p>";
+				if ($('.text-error').length == 0) {
+					$(error).insertBefore('#name');
+				}else{
+					$('.text-error').text('Sorry the username already exists');	
+				}
+			}
 			
 
 		}else{
@@ -107,7 +121,7 @@ $('#chat-form').submit(function(e){
 		return false;
 	}
 	
-	socket.emit('chat message', msg);
+	socket.emit('chat message', msg, user.name);
 
 	var message = "<p class='user'><span> "+msg+"</span></p>";
 	$(message).appendTo('#chat-message');
@@ -132,9 +146,9 @@ $('#m').keyup(function(e) {
 	}
 });
 
-socket.on('chat message', function(msg){
+socket.on('chat message', function(msg, username){
 	
-	var message = "<p><span class='username'>"+user.name+" says:</span><span>"+msg+"</span></p>";
+	var message = "<p><span class='username'>"+username+" says:</span><span>"+msg+"</span></p>";
 	$(message).appendTo('#chat-message');
 
 	// Scrolling to the bottom of the chat
@@ -184,3 +198,7 @@ function getDataStoredInBrowser()
 	return window.localStorage.getItem('localhostChatUserData');
 }
 
+function checkSocketForName(name)
+{
+
+}

@@ -17,8 +17,9 @@ var testIp = [];
 var roomsDetail = [];
 
 io.on('connection', function(socket){
+	
 	var currentRoom = '';
-	// console.log(socket);
+	console.log(socket.rooms);
 
 	// For figuring out the ip address of user
 	usersIp.push(socket.handshake.headers.host);
@@ -102,10 +103,11 @@ io.on('connection', function(socket){
 		var totalUsers = usersDetail.filter(function (el) {
 		  return el != null;
 		});
+		
 		usersDetail = totalUsers;
 		totalUsers = null;
 
-		io.emit('totalUsers',usersDetail);
+		io.emit('totalUsers',usersDetail.length);
 		
 
 		if (socket.username != undefined) {
@@ -120,7 +122,7 @@ io.on('connection', function(socket){
 	// Emitted event on chat form submittion
 	socket.on('chat message', function(msg){
 		if (currentRoom == "") {
-			socket.broadcast.emit('chat message', msg);		
+			socket.broadcast.emit('chat message', msg,socket.username);		
 		}else{
 			socket.broadcast.to(currentRoom).emit('chat message', msg , socket.username);
 		}
@@ -129,6 +131,7 @@ io.on('connection', function(socket){
 	socket.on('register',function(user){
 		var user = JSON.parse(user);
 		socket.username = user.name;
+	
 		var userIsInArray = false;
 
 		for (var i = 0; i < usersDetail.length; i++) {
@@ -146,10 +149,12 @@ io.on('connection', function(socket){
 		console.log('On Register user: detail '+ usersDetail);
 
 	});
+
+
 });
 
 http.listen(3000, function(){
 	console.log('listening on *:3000');
 });
 
-
+	
