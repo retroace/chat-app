@@ -108,7 +108,7 @@ io.on('connection', function(socket){
 		totalUsers = null;
 
 		io.emit('totalUsers',usersDetail.length);
-		
+		io.emit('user leave', socket.username);
 
 		if (socket.username != undefined) {
 			if (currentRoom = '') {
@@ -145,6 +145,7 @@ io.on('connection', function(socket){
 		}
 		
 		io.emit('totalUsers',usersDetail.length);
+		io.emit('newUserConnected',socket.username + " has connected")
 		console.dir(usersDetail);
 		console.log('On Register user: detail '+ usersDetail);
 

@@ -151,14 +151,13 @@ socket.on('chat message', function(msg, username){
 	var message = "<p><span class='username'>"+username+" says:</span><span>"+msg+"</span></p>";
 	$(message).appendTo('#chat-message');
 
+	// Emoticons
+	$('#chat-message p').emoticonize();
+
 	// Scrolling to the bottom of the chat
 	var chatMessage = document.getElementById('chat-message');
 	chatMessage.scrollTo(0,chatMessage.scrollHeight);
-	
-	// Emoticons
-	$('#chat-message').emoticonize({
-		animate:false,
-	});
+
 });
 
 socket.on('newUserConnected', function(data){
@@ -173,6 +172,11 @@ socket.on('userAction',function(msg,user){
 	var chatMessage = document.getElementById('chat-message');
 	chatMessage.scrollTo(0,chatMessage.scrollHeight);
 });
+
+socket.on('user leave',function(user){
+	$('#chat-container-title').text(user+ " has left the chat").css('color','red');
+});
+
 
 $('#create-room').submit(function(e){
 	e.preventDefault();
