@@ -8,15 +8,32 @@ var room = {
 	token: ''
 };
 
+var timer;
+
+$('#m').keyup(function(e){
+	e.preventDefault();
+	clearInterval(timer);
+	$('#favicon').attr('href','/page/img/favicon.ico');
+});
+$('.showSidebar').hide();
+
 $('#hide-sidebar').click(function(e){
 	$('#chat-lists').hide();
+	$('.showSidebar').show();
 	
 	$('#chat-section').css({
 		margin: 'auto',
 		float: 'none'
 	});
 });
-
+$('.showSidebar').click(function(e){
+	e.preventDefault();
+	$('#chat-lists').show();
+	$('#chat-section').css({
+		margin: '0',
+		float: 'right'
+	});
+});
 $('#name-form').submit(function(e){
 	e.preventDefault();
 	$('#nameSubmit').click();
@@ -157,6 +174,23 @@ socket.on('chat message', function(msg, username){
 	// Scrolling to the bottom of the chat
 	var chatMessage = document.getElementById('chat-message');
 	chatMessage.scrollTo(0,chatMessage.scrollHeight);
+	
+	clearInterval(timer);
+	if ($('#m').is(':focus') == false) {
+		timer = setInterval(function(){
+			if ($('#favicon').attr('href') == '/page/img/favicon2.ico') {
+				$('#favicon').attr('href','/page/img/favicon.ico');
+			}else if($('#favicon').attr('href') == '/page/img/favicon.ico'){
+				$('#favicon').attr('href','/page/img/favicon2.ico');
+			}
+		},300);
+		var random = ['cheerful','plucky']  ;
+		var randomNumber = Math.floor(Math.random() * 2);
+
+		playSound('notification');
+		
+	}
+	
 
 });
 
@@ -206,3 +240,16 @@ function checkSocketForName(name)
 {
 
 }
+
+
+function playSound(filename){
+	// var mp3Source = '<source src="' + filename + '.mp3" type="audio/mpeg">';
+	var oggSource = '<source src="/page/sounds/'+filename+'.ogg" type="audio/ogg">';
+	var embedSource = '<embed hidden="true" autostart="true" loop="false" src="/page/sounds/' + filename +'.mp3">';
+	document.getElementById("sound").innerHTML='<audio autoplay="autoplay">' + oggSource + embedSource + '</audio>';
+}
+
+$('#happy').click(function(e){
+	e.preventDefault();
+	playSound('aud');
+});

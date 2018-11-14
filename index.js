@@ -121,10 +121,12 @@ io.on('connection', function(socket){
 
 	// Emitted event on chat form submittion
 	socket.on('chat message', function(msg){
-		if (currentRoom == "") {
-			socket.broadcast.emit('chat message', msg,socket.username);		
-		}else{
-			socket.broadcast.to(currentRoom).emit('chat message', msg , socket.username);
+		if (socket.username != null) {
+			if (currentRoom == "") {
+				socket.broadcast.emit('chat message', msg,socket.username);		
+			}else{
+				socket.broadcast.to(currentRoom).emit('chat message', msg , socket.username);
+			}
 		}
 	});
 
