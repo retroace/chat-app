@@ -10,134 +10,111 @@ app.get('/', function(req, res){
 	res.sendFile(__dirname+'/page/index.html');
 });
 
+var extra = require("./message.js");
+
 var usersDetail = [];
 var totalUser = 0;
 var usersIp = [];
 var testIp = [];
 var roomsDetail = [];
+var chatRoom = [];
 
-io.on('connection', function(socket){
-	
-	var currentRoom = '';
-	console.log(socket.rooms);
+var globalRoom = {
+	id: '1saw-dk2jfie-skjier4',
+	name: "global"
+};
+var users = [];
 
-	// For figuring out the ip address of user
-	usersIp.push(socket.handshake.headers.host);
-	testIp.push(socket.handshake.headers["x-real-ip"]);
-	
-	// console.log("usersIp:" + usersIp);
-	// console.log("testIp:" + testIp);
-	
-	socket.on('createRoom',function(room){
-		roomsDetail.push(room);
-		socket.join(room.name);
-		currentRoom = room.name;
-	});
+io.on('connection', (socket) => {
+	users.push(socket.id);
+	var currentRoom = globalRoom;
 
-	socket.on('action',function(action){
-		io.emit('userAction',action);
-	});
-
-
-	socket.on('joinRoom',function(roomCredentials){
-		// Verify room credentials with above roomDetail
-		var requestedRoom = [];
-		
-		for (var i = 0; i < roomsDetail.length; i++) {
-			if(roomsDetail[i].name == roomCredentials.name)
-			{
-				requestedRoom.push(roomsDetail[i]);
-			}
+	socket.on('message',(msg) => {
+		if (socket.rooms.length == undefined) {
+			socket.join(currentRoom.id);
 		}
 
-		if (requestedRoom.length) {
-			if (requestedRoom.passKey == '' || requestedRoom.passKey == roomCredentials.passKey) {
-				if (currentRoom != '') {
-					socket.leave(currentRoom);
-				}
-				socket.join(room.name);
-			}
-		}else{
-			socket.emit('errorJoiningRoom',"Cannot join room");
+		var message = {
+			"name": socket.name,
+			"message": msg
+		}
+
+		if (socket.name != null) {
+			socket.broadcast.to(currentRoom.id).emit('chat', message);
+			socket.broadcast.to(globalRoom.id).emit('topMessage',socket.name + " has connected");
 		}
 	});
 
 	socket.on('newUser',function(user){
-		var userDetail = {
+		var userData = {
 			id: user.id,
 			name: user.name
 		};
+		usersDetail.push(userData);
+		socket.emit('registered', message);
 
-		socket.id = user;
-		socket.username = user;
+	});
 
-		usersDetail.push(userDetail);
-
-		socket.broadcast.emit('newUserConnected', socket.username + " has connected to chat");
-		io.emit('totalUsers',usersDetail.length);
-		
-		console.log("Users : "+usersDetail);
-		console.log('a user connected');
+	socket.on('newRoom',function(room){
+		var roomDetail = {
+			id: uniqueID(),
+			name: room.name,
+			password: room.password
+		};
+		socket.join(id);
+		chatRoom.push(roomDetail);
 	});
 	
-	
+	socket.on('joinRoom',function(room){
+		var roomDetail = {
+			id: uniqueID(),
+			name: room.name,
+			password: room.password
+		};
 
-	totalUser++;
-	
-	// Counting Users
-	console.log("clients: " + usersDetail.length);
+		// The room user wanted to enter
+		var wantedRoom = chatRoom.filter( (item,index) =>{
+			if (item.name == room.name) {
+				return true;
+			}
+			return false;
+		});
 
+		if (wantedRoom.length == 1) {
+			if (wantedRoom.password == '') {
+				socket.join(wantedRoom.id);
+			}
+
+			if (wantedRoom.password == room.password) {
+				socket.join(wantedRoom.id);
+			}
+
+		}else if (wantedRoom.length > 1) {
+			socket.emit('message', extra.invalidCredential);	
+		}
+	});
 
 	socket.on('disconnect', function(user){
-		totalUser--;
-		
-		console.log('user disconnected '+ socket.username);
-		
-		for (var i = 0; i < usersDetail.length; i++) {
-			if(usersDetail[i].name == socket.username )
-			{
-				usersDetail.pop(i);
-			}
-		}
-
-		var totalUsers = usersDetail.filter(function (el) {
-		  return el != null;
-		});
-		
-		usersDetail = totalUsers;
-		totalUsers = null;
 
 		io.emit('totalUsers',usersDetail.length);
-		io.emit('user leave', socket.username);
+		io.emit('userHasLeft', user.name+" "+message.userLeave);
 
 		if (socket.username != undefined) {
 			if (currentRoom = '') {
-				io.emit('userDisconnected', socket.username+ " has left the chat");
+				io.to(global.id).emit('userDisconnected', socket.name+ " has left the chat");
 			}else{
-				io.to(currentRoom).emit('userDisconnected', socket.username+ " has left the chat");
+				io.to(currentRoom.id).to(currentRoom.id).emit('userDisconnected', socket.username+ " has left the chat");
 			}
 		}
 	});
 
-	// Emitted event on chat form submittion
-	socket.on('chat message', function(msg){
-		if (socket.username != null) {
-			if (currentRoom == "") {
-				socket.broadcast.emit('chat message', msg,socket.username);		
-			}else{
-				socket.broadcast.to(currentRoom).emit('chat message', msg , socket.username);
-			}
-		}
-	});
-
-	socket.on('register',function(user){
+	socket.on('register',(user) => {
 		var user = JSON.parse(user);
-		socket.username = user.name;
-	
+		socket.name = user.name;
 		var userIsInArray = false;
 
 		for (var i = 0; i < usersDetail.length; i++) {
-			if (usersDetail[i].id == user.id) {
+			if (usersDetail[i].id == socket.id) {
 				userIsInArray = true;
 			}
 		}
@@ -145,15 +122,14 @@ io.on('connection', function(socket){
 		if (userIsInArray == false) {
 			usersDetail.push(user);
 		}
-		
 		io.emit('totalUsers',usersDetail.length);
-		io.emit('newUserConnected',socket.username + " has connected")
-		console.dir(usersDetail);
-		console.log('On Register user: detail '+ usersDetail);
+		io.to(global.id).emit('topMessage',socket.name + " has connected")
 
 	});
 
-
+	socket.on('getChatRooms',() => {
+		socket.emit('chatRooms', chatRoom);
+	});
 });
 
 http.listen(3000, function(){
@@ -161,3 +137,13 @@ http.listen(3000, function(){
 });
 
 	
+function uniqueID(){
+  function chr4(){
+    return Math.random().toString(16).slice(-4);
+  }
+  return chr4() + chr4() +
+    '-' + chr4() +
+    '-' + chr4() +
+    '-' + chr4() +
+    '-' + chr4() + chr4() + chr4();
+}

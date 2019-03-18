@@ -6,72 +6,191 @@
 	<link rel="stylesheet" type="text/css" href="/page/css/cssemoticons.css">
 	<link rel="icon" type="image/css" href="/page/img/favicon.ico" id="favicon">
 	<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+	<style>
+		.icon-padding{
+			padding: 5px;
+		}
+	</style>
 </head>
 <body>
-	<div class="container">
-		<div class="section v-all" id="chat-lists">
+<div id="app">
+		
+	<div class="row">
+		<div class="col s4 teal lighten-2 vh-100" v-show="sidebar">
 			<div class="jumbotron">
-				<h1>Welcome to RTCS</h1>
-				<p>Take a look at our top chat sites and join/create one of the room. </p>
-				<p>And remember to love <strong>spring</strong>. We all love spring and so should you</p>
-				<p class="text-success mt-2">Currently online: <span id="total-users"></span></p>
+				<p class="flow-text">Welcome to Chat Room</p>
 			</div>
-			<div class="mt-2"></div>
-			<p class="title">Chat rooms</p>
-			<ul class="list-items">
-			    <li class="chat-room-list"><a class="chat-room w-100" href="#">Global Chat</a></li>
-			    <li class="chat-room-list"><a class="chat-room w-100" href="/chat/room1">Room 1</a></li>
-			    <li class="chat-room-list"><a class="chat-room w-100" href="/chat/room1">Coders</a></li>
-			</ul>
-			<p class="w-100" id="hide-sidebar">Hide Sidebar</p>
+			<div>
+				<p class="title white-text">Chat rooms</p>
+				<a href="#" class="white-text">Create Chat Room</a>
+				<ul class="collection" v-for="room in rooms">
+				    <li class="collection-item"><a class="chat-room w-100" @click="joinRoom(room)">{{ room.name }}</a></li>
+				</ul>
+			</div>
+			<p @click="sidebar = false">Hide Sidebar</p>
 		</div>
 
 
-		<div class="section bg-light v-all" id="chat-section">
-			<div class="absolute v-all w-100 overlay all-0 f-column" id="chat-overlay">
-				<!-- Name form for chat -->
-				<div class="vertical-center flex-center">		
-					<form id="name-form" action="" accept-charset="utf-8" class="d-flex">
-						<div class="from-group">
-							<input type="text" placeholder="Enter Your Name" id="name" class="w-100 py-2" name="name">
-						</div>
-						<button type="submit" class="py-2" id="nameSubmit">Submit</button>
-					</form>
+		<div class="relative flex-column bg-light vh-100 col s8" id="chat-section">
+			<div class="flex-column-center v-all overlay all-0 f-column"  v-if="!registered">
+				<div class="vertical-center flex-center col s6 m-auto">		
+					<div class="input-field">
+						<input placeholder="Enter Your Name" v-model="user.name" type="text" class="validate white-text" @keyup.enter="registerUser()">
+					</div>
+					<button type="submit" class="btn" @click="registerUser()">Submit</button>
 				</div>
 
 			</div>
 
 			<!-- Chat title -->
-			<div class="w-100 bg-white border-black mb-2 justify-content-between">
-				<div class="py-2 px-2">
-					<span id="chat-container-title">Say Hi in chat</span> 
-				</div>
-				<div class="user-action">
-					<i class="fa fa-beer action-beer fa-2x icon-padding clickable"></i>
-					<i class="fa fa-arrow-left fa-2x icon-padding clickable showSidebar"></i>
-					<i class="fa fa-smile-o fa-2x icon-padding clickable" id="happy"></i>
-					<i class="fa fa-trash-o icon-padding clickable fa-2x" id="clear-chat"></i> 
-				</div>
-			</div> 
+
+			<div class="row">
+				<div class="card horizontal justify absolute top">
+					<div class="card-content teal accent-4">
+						<div v-if="status" class="white-text">{{ status }}</div>
+						<span id="card-title" v-else>Say Hi in chat</span> 
+					</div>
+					<div class="card-action">
+						<i class="fa fa-beer action-beer fa-2x icon-padding clickable"></i>
+						<i class="fa fa-arrow-right fa-2x icon-padding" @click="sidebar = true" v-show="!sidebar"></i>
+						<i class="fa fa-smile-o fa-2x icon-padding clickable" @click="happy()"></i>
+						<i class="fa fa-trash-o icon-padding clickable fa-2x" @click="clear()"></i> 
+					</div>
+				</div> 
+			</div>
 
 			<!-- Chat message field -->
-			<div id="chat-message">
-			    
+			<div class="flex overflow-hide" id="chat-message">
+			    <div v-for="chat in chats">
+			    	<div v-if="chat.name == user.name" class="hoverable">
+			    		<i class="material-icons">person</i>
+				    	<span class="teal lighten-2">{{ chat.message }}</span>    		
+			    	</div>
+			    	<div v-else>
+				    	<span>{{ chat.name }}</span>
+				    	<span class="teal lighten-2">{{ chat.message }}</span>
+			    		<i class="material-icons">person</i>
+			    	</div>
+			    </div>
 			</div>
 				
 			<!-- Chat message field -->
-			<div  class="absolute-bottom w-100">
+			<div  class="w-100">
 				<form id="chat-form" action="" method="" accept-charset="utf-8">
-					<textarea name="m" rows="1" class="absolute-bottom w-100 py-2 px-2" id="m" placeholder="Enter a message"></textarea>
+					<div class="input-field file-field">
+						<div class="btn">
+							<span>Message</span>
+						</div>	
+						<div class="file-path-wrapper">
+							<textarea  class="materialize-textarea" v-model="message" rows="1" placeholder="Send A Message" @keyup.enter="sendMessage()"></textarea>
+						</div>
+					</div>
 				</form>
 			</div>
 		</div>
 		<div id="sound"></div>
 
-	</div>	
-	<script src="/page/js/jquery.js"></script>
+	</div>
+</div>	
+	<script src="/page/js/vue.js"></script>
 	<script src="/socket.io/socket.io.js"></script>
-	<script src="/page/js/cssemoticons.min.js"></script>
-	<script src="/page/js/chat-index.js"></script>
+	<!-- <script src="/page/js/cssemoticons.min.js"></script> -->
+	<!-- <script src="/page/js/chat-index.js"></script> -->
+	<script>
+		var socket = io()
+		const app = new Vue({
+			el: "#app",
+			data(){
+				return {
+					rooms:[],
+					sidebar: true,
+					message:'',
+					user:{
+						name:''
+					},
+					chats: [],
+					socket: null,
+					registered: false,
+					status: '',
+				};
+			},
+			created(){
+				this.socket = window.socket;
+				this.checkStorage();
+			},
+			mounted(){
+				this.getMessage();	
+				this.getTopMessage();	
+			},
+			methods: {
+				checkStorage: function(){
+					let content = window.localStorage.getItem('localChatStorage');
+					if (content != null) {
+						content = JSON.parse(content);
+						this.user.name = content.name;
+						this.registerUser();
+					}
+				},
+
+				setStorage: function(){
+					window.localStorage.setItem('localChatStorage',JSON.stringify(this.user))
+				},
+
+				removeStorage: function(){
+					window.localStorage.removeItem('localChatStorage');
+				},
+
+				playSound: function (filename){
+					// var mp3Source = '<source src="' + filename + '.mp3" type="audio/mpeg">';
+					var oggSource = '<source src="/page/sounds/'+filename+'.ogg" type="audio/ogg">';
+					var embedSource = '<embed hidden="true" autostart="true" loop="false" src="/page/sounds/' + filename +'.mp3">';
+					document.getElementById("sound").innerHTML='<audio autoplay="autoplay">' + oggSource + embedSource + '</audio>';
+				},
+				happy: function(){
+					this.playSound('aud');
+				},
+				sendMessage: function(){
+					this.socket.emit('message', this.message);
+					var message = "<p class='user'><span> "+this.message+"</span></p>";
+					
+					this.chats.push({
+						name: this.user.name,
+						message: this.message
+					});
+					this.message = '';
+				},
+				registerUser: function(){
+					if (this.user.name.length > 0) {
+						this.socket.emit('newUser',this.user);
+						this.socket.emit('register', JSON.stringify(this.user));
+						
+						this.socket.on('registered', () => {
+							this.registered = true;
+							this.setStorage();
+						});
+					}
+				},
+				getMessage: function(){
+					this.socket.on('chat', (message) => {
+						this.chats.push({
+							name: message.name,
+							message: message.message
+						});
+						console.log("Got Chat",message);
+						this.playSound('notification');
+					});
+				},
+				getTopMessage: function(){
+					this.socket.on('topMessage',(message) => {
+						console.log("Messages",message);
+						this.status = message;
+					})
+				}
+
+			},
+		});
+	</script>
 </body>
 </html>

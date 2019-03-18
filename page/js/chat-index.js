@@ -45,7 +45,6 @@ $('#clear-chat').click(function(e){
 });
 
 // Initializing socket io
-var socket = io();
 
 if (typeof(Storage) != 'undefined') {
 	var chatData = getDataStoredInBrowser();
@@ -56,7 +55,6 @@ if (typeof(chatData) != 'undefined' && chatData != null) {
 	user.id = chatData.id;
 	user.name = chatData.name;
 	
-	console.log('chatSesison stored');
 	$('#chat-overlay').hide();
 
 	socket.emit('register', JSON.stringify(user));
@@ -76,7 +74,6 @@ if (typeof(chatData) != 'undefined' && chatData != null) {
 			
 			if (isUsernameAvaiable) {
 				// User generated value
-				user.id = Math.random().toString(36).substring(3,16) + +new Date;
 				user.name = name.val();
 
 				setDataInBrowser(user);
@@ -87,8 +84,7 @@ if (typeof(chatData) != 'undefined' && chatData != null) {
 					type: 'hidden'
 				});
 
-				socket.emit('newUser',user.name);
-		
+				
 				$('#m').attr('placeholder','Enter a message '+ user.name);
 		
 				$('#chat-container-title').text(user.name+ " has connected to chat").css('color','green');
@@ -114,7 +110,6 @@ if (typeof(chatData) != 'undefined' && chatData != null) {
 
 socket.on('totalUsers', function(totalUsers) {
 	$('#total-users').text(totalUsers);
-	console.log(totalUsers);
 
 });
 
@@ -138,24 +133,7 @@ $('#chat-form').submit(function(e){
 		return false;
 	}
 	
-	socket.emit('chat message', msg, user.name);
-
-	var message = "<p class='user'><span> "+msg+"</span></p>";
-	$(message).appendTo('#chat-message');
 	
-	msgField.val('');
-	
-	// Scrolling to the bottom of the chat
-	var chatMessage = document.getElementById('chat-message');
-	chatMessage.scrollTo(0,chatMessage.scrollHeight);
-
-	// Emoticons
-	$('#chat-message').emoticonize({
-		animate:false,
-	});	
-	
-	return false;
-});
 
 $('#m').keyup(function(e) {
 	if (e.which == 13) {
@@ -163,38 +141,39 @@ $('#m').keyup(function(e) {
 	}
 });
 
-socket.on('chat message', function(msg, username){
+// socket.on('chat', function(msg, username){
+// 	console.log(msg,username);
+// 	var message = "<p><span class='username'>"+username+" says:</span><span>"+msg+"</span></p>";
+// 	$(message).appendTo('#chat-message');
+
+// 	// Emoticons
+// 	$('#chat-message p').emoticonize();
+
+// 	// Scrolling to the bottom of the chat
+// 	var chatMessage = document.getElementById('chat-message');
+// 	chatMessage.scrollTo(0,chatMessage.scrollHeight);
 	
-	var message = "<p><span class='username'>"+username+" says:</span><span>"+msg+"</span></p>";
-	$(message).appendTo('#chat-message');
+// 	clearInterval(timer);
+// 	if ($('#m').is(':focus') == false) {
+// 		timer = setInterval(function(){
+// 			if ($('#favicon').attr('href') == '/page/img/favicon2.ico') {
+// 				$('#favicon').attr('href','/page/img/favicon.ico');
+// 			}else if($('#favicon').attr('href') == '/page/img/favicon.ico'){
+// 				$('#favicon').attr('href','/page/img/favicon2.ico');
+// 			}
+// 		},300);
+// 		var random = ['cheerful','plucky']  ;
+// 		var randomNumber = Math.floor(Math.random() * 2);
 
-	// Emoticons
-	$('#chat-message p').emoticonize();
-
-	// Scrolling to the bottom of the chat
-	var chatMessage = document.getElementById('chat-message');
-	chatMessage.scrollTo(0,chatMessage.scrollHeight);
-	
-	clearInterval(timer);
-	if ($('#m').is(':focus') == false) {
-		timer = setInterval(function(){
-			if ($('#favicon').attr('href') == '/page/img/favicon2.ico') {
-				$('#favicon').attr('href','/page/img/favicon.ico');
-			}else if($('#favicon').attr('href') == '/page/img/favicon.ico'){
-				$('#favicon').attr('href','/page/img/favicon2.ico');
-			}
-		},300);
-		var random = ['cheerful','plucky']  ;
-		var randomNumber = Math.floor(Math.random() * 2);
-
-		playSound('notification');
+// 		playSound('notification');
 		
-	}
+// 	}
 	
 
-});
+// });
 
-socket.on('newUserConnected', function(data){
+socket.on('topMessage', function(data){
+	console.log(data);
 	$('#chat-container-title').text(data).css('color','green');
 });
 
@@ -240,16 +219,3 @@ function checkSocketForName(name)
 {
 
 }
-
-
-function playSound(filename){
-	// var mp3Source = '<source src="' + filename + '.mp3" type="audio/mpeg">';
-	var oggSource = '<source src="/page/sounds/'+filename+'.ogg" type="audio/ogg">';
-	var embedSource = '<embed hidden="true" autostart="true" loop="false" src="/page/sounds/' + filename +'.mp3">';
-	document.getElementById("sound").innerHTML='<audio autoplay="autoplay">' + oggSource + embedSource + '</audio>';
-}
-
-$('#happy').click(function(e){
-	e.preventDefault();
-	playSound('aud');
-});
