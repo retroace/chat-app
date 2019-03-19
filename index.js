@@ -28,7 +28,7 @@ var users = [];
 io.on('connection', (socket) => {
 	users.push(socket.id);
 	var currentRoom = globalRoom;
-
+	socket.join(globalRoom.id);
 	socket.on('message',(msg) => {
 		if (socket.rooms.length == undefined) {
 			socket.join(currentRoom.id);

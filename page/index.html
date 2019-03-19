@@ -17,7 +17,7 @@
 <body>
 <div id="app">
 		
-	<div class="row">
+	<div class="row mb-0">
 		<div class="col s4 teal lighten-2 vh-100" v-show="sidebar">
 			<div class="jumbotron">
 				<p class="flow-text">Welcome to Chat Room</p>
@@ -46,7 +46,7 @@
 
 			<!-- Chat title -->
 
-			<div class="row">
+			<div class="row mb-0">
 				<div class="card horizontal justify absolute top">
 					<div class="card-content teal accent-4">
 						<div v-if="status" class="white-text">{{ status }}</div>
@@ -56,13 +56,13 @@
 						<i class="fa fa-beer action-beer fa-2x icon-padding clickable"></i>
 						<i class="fa fa-arrow-right fa-2x icon-padding" @click="sidebar = true" v-show="!sidebar"></i>
 						<i class="fa fa-smile-o fa-2x icon-padding clickable" @click="happy()"></i>
-						<i class="fa fa-trash-o icon-padding clickable fa-2x" @click="clear()"></i> 
+						<i class="fa fa-trash-o icon-padding clickable fa-2x" @click="clearMessage()"></i> 
 					</div>
 				</div> 
 			</div>
 
 			<!-- Chat message field -->
-			<div class="flex overflow-hide" id="chat-message">
+			<div class="flex overflowy-scroll mb-2" id="chat-message">
 			    <div v-for="chat in chats">
 			    	<div v-if="chat.name == user.name" class="hoverable">
 			    		<i class="material-icons">person</i>
@@ -152,14 +152,24 @@
 					this.playSound('aud');
 				},
 				sendMessage: function(){
-					this.socket.emit('message', this.message);
-					var message = "<p class='user'><span> "+this.message+"</span></p>";
-					
-					this.chats.push({
-						name: this.user.name,
-						message: this.message
-					});
-					this.message = '';
+					if (this.message.trim().length) {
+						this.socket.emit('message', this.message);
+
+						this.chats.push({
+							name: this.user.name,
+							message: this.message
+						});
+
+						this.message = '';
+					}
+					this.chatScroll();
+				},
+				chatScroll: function(){
+					setTimeout(() => {
+						let objDiv = document.getElementById("chat-message");
+						objDiv.scrollTop = objDiv.scrollHeight;
+					},400);
+
 				},
 				registerUser: function(){
 					if (this.user.name.length > 0) {
@@ -178,8 +188,9 @@
 							name: message.name,
 							message: message.message
 						});
-						console.log("Got Chat",message);
 						this.playSound('notification');
+					
+						this.chatScroll();
 					});
 				},
 				getTopMessage: function(){
@@ -187,6 +198,9 @@
 						console.log("Messages",message);
 						this.status = message;
 					})
+				},
+				clearMessage: function(){
+					this.chats = [];
 				}
 
 			},
