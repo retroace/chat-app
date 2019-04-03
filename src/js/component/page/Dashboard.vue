@@ -4,8 +4,12 @@
 			<div class="jumbotron">
 				<p class="flow-text white-text">Welcome to Chat Room</p>
 				<p v-if="currentRoom.length">Current Room: {{ currentRoom.name }}</p>
+				<p class="white-text">Online Users: {{ onlineUsers }}</p>
+				<div class="w-100">
+					<span class="icon-padding white-text" v-for="user in users">{{ user }}</span>
+				</div>
 			</div>
-			<div class="blue-grey card horizontal space-between" style="padding: 0 10px;">
+			<div class="blue-grey card horizontal space-between w-100" style="padding: 0 10px;">
 				<p class="title white-text flex-column-center">Chat rooms</p>
 				<p class="transparent btn-floating" @click="openModel()">
 					<i class="material-icons clickable white-text" title="Create Chat Room">
@@ -151,6 +155,8 @@
 					name: '',
 					password: ''
 				},
+				onlineUsers: null,
+				users: null,
 				model: false,
 				chats: [],
 				socket: null,
@@ -171,10 +177,19 @@
 			this.getTopMessage();
 			this.getRoom();
 			this.joinedRoom();	
-			this.leftRoom();	
+			this.leftRoom();
+			this.getOnlineUsers();	
 			this.getChatRooms();
 		},
 		methods: {
+			getOnlineUsers(){
+				this.socket.on('onlineUsers', (data) => {
+					const { total , users } = data;
+					this.onlineUsers = total; 
+					this.users = users;
+					console.log(data); 
+				})
+			},
 			chatDisabled(room){
 				if(room.id = this.currentRoom.id)
 				{
@@ -185,7 +200,7 @@
 			joinedRoom(){
 				this.socket.on('joinedRoom', (data)=>{
 					this.currentRoom = data;
-					
+					this.passwordModal.close();
 					this.join = {
 						name : null,
 						password : null
@@ -205,7 +220,6 @@
 						type: 'error',	
 						content : `${data.name} has left the chat`
 					};
-					console.log("User has left",data);
 				});
 				this.socket.on('userJoin',(data) => {
 					this.serverMessages= {
@@ -227,7 +241,8 @@
 						this.passwordModal.open();
 					}else{
 						room.password = this.join.password;
-						this.socket.emit('joinRoom',room);
+						this.socket
+						.emit('joinRoom',room);
 					}
 				}else{
 					this.socket.emit('joinRoom',room);

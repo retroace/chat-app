@@ -33,59 +33,70 @@ io.on('connection', (socket) => {
 		currentRoom = globalRoom;
 		socket.join(currentRoom.id);
 	}
-
-
+	
+	totalUser++;
+	
 	socket.on('message',(msg) => {
 		if (socket.rooms.length == undefined) {
 			socket.join(currentRoom.id);
 		}
-
+		
 		var message = {
 			"name": socket.name,
 			"message": msg
 		}
-
+		
 		if (socket.name != null) {
 			socket.to(currentRoom.id).emit('chat', message);
 		}
 	});
-
+	
 	socket.on('leaveRoom',(data) => {
 		socket.leave(data.id);
+		
 		let user = {
 			name : socket.name
 		};
+		
 		socket.to( data.id ).emit('userLeft',user);
 		currentRoom = globalRoom.id;
 		socket.join(globalRoom.id);
 		socket.emit('leaveRoom');
 	});
-
-	socket.on('newUser',function(user){
+	
+	socket.on('newUser',(data) => {
 		var userData = {
-			id: user.id,
-			name: user.name
+			id: socket.id,
+			name: data.name
 		};
-		socket.username = user.name;
+		socket.username = data.name;
 		usersDetail.push(userData);
 		socket.emit('registered', message);
-
+		// Emit All User Name
+		let names = JSON.parse(JSON.stringify(usersDetail)).map((item,index) => {
+			return item.name;
+		});
+		
+		io.emit('onlineUsers',{
+			total: totalUser,
+			users: names
+		});
 	});
-
+	
 	socket.on('newRoom',function(room){
 		let roomDetail = {
 			id: uniqueID(),
 			name: room.name,
-			password: room.password
+			password: room.password,
+			admin: socket.name
 		};
-
+		
 		socket.join(roomDetail.id);
 		socket.leave(currentRoom.id);
 		currentRoom = roomDetail;
 		chatRoom.push(roomDetail);
 		
 		let hasPassword = (roomDetail.password != undefined && roomDetail.password.length > 1) ? true: false; 
-		
 		let newRoomDetail = {
 			id: roomDetail.id,
 			name: room.name,
@@ -96,96 +107,111 @@ io.on('connection', (socket) => {
 		io.emit('newRoom',newRoomDetail);
 	});
 	
-	socket.on('joinRoom',function(room){
+	socket.on('joinRoom',function(roomData){
 		var roomDetail = {
-			id: room.id,
-			name: room.name,
-			password: room.password
+			id: roomData.id,
+			name: roomData.name,
+			password: roomData.password
 		};
-
 		// The room user wanted to enter
 		var wantedRoom = chatRoom.filter( (item,index) =>{
-			if (item.name == room.name) {
+			if (item.name == roomData.name) {
 				return true;
 			}
 			return false;
 		});
-
+		
 		if (wantedRoom.length == 1) {
 			wantedRoom = wantedRoom[0];
+			
 			if (wantedRoom.password == '' || wantedRoom.password == false) {
 				socket.leave(currentRoom.id);
 				currentRoom = wantedRoom;
 				
 				socket.join(wantedRoom.id);
 				socket.emit("joinedRoom", wantedRoom);
+				
 				let user = {
 					name: socket.name
 				};
+				
 				socket.to( wantedRoom.id ).emit('userJoin',user);
 			}else{
-				if (wantedRoom.password == room.password) {
+				if (wantedRoom.password == roomData.password) {
 					socket.join(wantedRoom.id);
+					currentRoom = wantedRoom;
 					let newWantedRoom = {
 						id: wantedRoom.id,
 						name: wantedRoom.name,
 						password: true
 					};
-
+					
 					socket.emit("joinedRoom", newWantedRoom);
 				}
 			}
 		}else if (wantedRoom.length > 1) {
 			if (room.password == '') {
-				socket.emit('getPassword',room);	
+				socket.emit('getPassword',roomData);	
 			}
-
+			
 			socket.emit('message', extra.invalidCredential);	
 		}
 	});
-
-	socket.on('disconnect', function(user){
-
-		io.emit('totalUsers',usersDetail.length);
-		io.emit('userHasLeft', user.name+" "+message.userLeave);
-
-		if (socket.username != undefined) {
-			if (currentRoom = '') {
-				io.to(global.id).emit('userDisconnected', socket.name+ " has left the chat");
-			}else{
-				io.to(currentRoom.id).to(currentRoom.id).emit('userDisconnected', socket.username+ " has left the chat");
+	
+	socket.on('disconnect', (user) => {
+		totalUser--;
+		
+		let onlineUser = users.filter((item,index) => {
+			if(item == socket.id){
+				return false;
 			}
+			return true;
+		});
+		
+		usersDetail = JSON.parse(JSON.stringify(usersDetail)).filter((item,index) => {
+			if(item.id == socket.id){ 
+				return false; 
+			} 
+			return true;
+		});
+		
+		users = onlineUser;
+		
+		io.emit('totalUsers',usersDetail.length);
+		if (socket.name != undefined) {
+			io.to(currentRoom.id).emit('userDisconnected', {name: socket.name});
 		}
 	});
-
+	
 	socket.on('register',(user) => {
 		var user = JSON.parse(user);
 		socket.name = user.name;
 		var userIsInArray = false;
-
+		
 		for (var i = 0; i < usersDetail.length; i++) {
 			if (usersDetail[i].id == socket.id) {
 				userIsInArray = true;
 			}
 		}
-
+		
 		if (userIsInArray == false) {
 			usersDetail.push(user);
 		}
+		
 		io.emit('totalUsers',usersDetail.length);
-		io.to(global.id).emit('topMessage',socket.name + " has connected")
-
+		io.to(global.id).emit('topMessage',socket.name + " has connected");
 	});
-
+	
 	socket.on('getChatRooms',() => {
-		let chatRooms = chatRoom;
-		chatRooms.map((item,index) => {
+		let clonedChatRoom = JSON.parse(JSON.stringify(chatRoom));
+		
+		clonedChatRoom.map((item,index) => {
 			if (item.password != undefined) {
 				item.password = true;
 			}
 		});
-
-		socket.emit('chatRooms', chatRooms);
+		
+		socket.emit('chatRooms', clonedChatRoom);
 	});
 });
 
@@ -193,14 +219,14 @@ http.listen(3000, function(){
 	console.log('listening on *:3000');
 });
 
-	
+
 function uniqueID(){
-  function chr4(){
-    return Math.random().toString(16).slice(-4);
-  }
-  return chr4() + chr4() +
-    '-' + chr4() +
-    '-' + chr4() +
-    '-' + chr4() +
-    '-' + chr4() + chr4() + chr4();
+	function chr4(){
+		return Math.random().toString(16).slice(-4);
+	}
+	return chr4() + chr4() +
+	'-' + chr4() +
+	'-' + chr4() +
+	'-' + chr4() +
+	'-' + chr4() + chr4() + chr4();
 }

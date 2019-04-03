@@ -2480,6 +2480,10 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
@@ -2503,6 +2507,8 @@ __webpack_require__.r(__webpack_exports__);
         name: '',
         password: ''
       },
+      onlineUsers: null,
+      users: null,
       model: false,
       chats: [],
       socket: null,
@@ -2524,9 +2530,21 @@ __webpack_require__.r(__webpack_exports__);
     this.getRoom();
     this.joinedRoom();
     this.leftRoom();
+    this.getOnlineUsers();
     this.getChatRooms();
   },
   methods: {
+    getOnlineUsers: function getOnlineUsers() {
+      var _this = this;
+
+      this.socket.on('onlineUsers', function (data) {
+        var total = data.total,
+            users = data.users;
+        _this.onlineUsers = total;
+        _this.users = users;
+        console.log(data);
+      });
+    },
     chatDisabled: function chatDisabled(room) {
       if (room.id = this.currentRoom.id) {
         return 'disabled';
@@ -2535,34 +2553,36 @@ __webpack_require__.r(__webpack_exports__);
       return '';
     },
     joinedRoom: function joinedRoom() {
-      var _this = this;
+      var _this2 = this;
 
       this.socket.on('joinedRoom', function (data) {
-        _this.currentRoom = data;
-        _this.join = {
+        _this2.currentRoom = data;
+
+        _this2.passwordModal.close();
+
+        _this2.join = {
           name: null,
           password: null
         };
-        _this.chats = [];
+        _this2.chats = [];
       });
     },
     leftRoom: function leftRoom(user) {
-      var _this2 = this;
+      var _this3 = this;
 
       this.socket.on('leaveRoom', function () {
-        _this2.currentRoom = {
+        _this3.currentRoom = {
           id: ''
         };
       });
       this.socket.on('userLeft', function (data) {
-        _this2.serverMessages = {
+        _this3.serverMessages = {
           type: 'error',
           content: "".concat(data.name, " has left the chat")
         };
-        console.log("User has left", data);
       });
       this.socket.on('userJoin', function (data) {
-        _this2.serverMessages = {
+        _this3.serverMessages = {
           type: 'success',
           content: "".concat(data.name, " has joined the chat")
         };
@@ -2589,12 +2609,12 @@ __webpack_require__.r(__webpack_exports__);
       }
     },
     getChatRooms: function getChatRooms() {
-      var _this3 = this;
+      var _this4 = this;
 
       this.socket.emit('getChatRooms');
       this.socket.on('chatRooms', function (room) {
         if (room.length > 0) {
-          _this3.rooms = room;
+          _this4.rooms = room;
         }
       });
     },
@@ -2641,47 +2661,47 @@ __webpack_require__.r(__webpack_exports__);
       }, 400);
     },
     registerUser: function registerUser() {
-      var _this4 = this;
+      var _this5 = this;
 
       if (this.user.name.length > 0) {
         this.socket.emit('newUser', this.user);
         this.socket.emit('register', JSON.stringify(this.user));
         this.socket.on('registered', function () {
-          _this4.registered = true;
+          _this5.registered = true;
 
-          _this4.setStorage();
+          _this5.setStorage();
         });
       }
     },
     getMessage: function getMessage() {
-      var _this5 = this;
+      var _this6 = this;
 
       this.socket.on('chat', function (message) {
-        _this5.chats.push({
+        _this6.chats.push({
           name: message.name,
           message: message.message
         });
 
-        _this5.playSound('notification');
+        _this6.playSound('notification');
 
-        _this5.chatScroll();
+        _this6.chatScroll();
       });
     },
     getTopMessage: function getTopMessage() {
-      var _this6 = this;
+      var _this7 = this;
 
       this.socket.on('topMessage', function (message) {
-        _this6.status = message;
+        _this7.status = message;
       });
     },
     clearMessage: function clearMessage() {
       this.chats = [];
     },
     getRoom: function getRoom() {
-      var _this7 = this;
+      var _this8 = this;
 
       this.socket.on('newRoom', function (data) {
-        _this7.rooms.push(data);
+        _this8.rooms.push(data);
       });
     },
     createRoom: function createRoom() {
@@ -41636,13 +41656,28 @@ var render = function() {
           _vm._v(" "),
           _vm.currentRoom.length
             ? _c("p", [_vm._v("Current Room: " + _vm._s(_vm.currentRoom.name))])
-            : _vm._e()
+            : _vm._e(),
+          _vm._v(" "),
+          _c("p", { staticClass: "white-text" }, [
+            _vm._v("Online Users: " + _vm._s(_vm.onlineUsers))
+          ]),
+          _vm._v(" "),
+          _c(
+            "div",
+            { staticClass: "w-100" },
+            _vm._l(_vm.users, function(user) {
+              return _c("span", { staticClass: "icon-padding white-text" }, [
+                _vm._v(_vm._s(user))
+              ])
+            }),
+            0
+          )
         ]),
         _vm._v(" "),
         _c(
           "div",
           {
-            staticClass: "blue-grey card horizontal space-between",
+            staticClass: "blue-grey card horizontal space-between w-100",
             staticStyle: { padding: "0 10px" }
           },
           [
