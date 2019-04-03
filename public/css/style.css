@@ -7310,3 +7310,15 @@ input[type=range]::-ms-thumb {
   padding: 10px 5px 0 0;
 }
 
+.dark-set {
+  color: #615f5f;
+}
+
+.dark-set:hover {
+  color: #000;
+}
+
+.d-inline-block {
+  display: inline-block;
+}
+

@@ -1,6 +1,6 @@
 <template>
 	<div class="row mb-0">
-		<div class="col s3 teal lighten-2 vh-100" v-show="sidebar">
+		<div class="col s3 teal darken-1 vh-100" v-show="sidebar">
 			<div class="jumbotron">
 				<p class="flow-text white-text">Welcome to Chat Room</p>
 				<p v-if="currentRoom.length">Current Room: {{ currentRoom.name }}</p>
@@ -18,12 +18,19 @@
 			    	<a class="chat-room w-100 flex-column-center">
 			    		{{ room.name }}
 			    	</a>
-			    	<button class="btn btn-primary" @click="joinRoom(room)" :disabled="currentRoom.id == room.id">
-			    		{{ currentRoom.id == room.id ? 'Current' : 'Join' }}
-			    	</button>
+					<div v-if="currentRoom.id == room.id">
+						<button class="btn btn-primary" @click="leaveRoom(room)">
+							Leave
+						</button>
+					</div>
+					<div v-else>
+						<button class="btn btn-primary" @click="joinRoom(room)">
+							Join
+						</button>
+					</div>
 			    </li>
 			</ul>
-			<p class="clickable" @click="sidebar = false">Hide Sidebar</p>
+			<p class="clickable dark-set" @click="sidebar = false">Hide Sidebar</p>
 		</div>
 
 
@@ -41,12 +48,13 @@
 			<!-- Chat title -->
 
 			<div class="row mb-0">
-				<div class="card horizontal justify absolute top">
+				<div class="card horizontal justify absolute top w-100">
 					<div class="card-content teal lighten-1">
 						<div v-if="status" class="white-text">{{ status }}</div>
 						<span id="card-title" class="white-text" v-else>Say Hi in chat</span> 
 					</div>
 					<div class="card-action">
+						<p :class="serverErrorClass">{{serverMessages.content}}</p>
 						<i id="beer" class="fa fa-beer action-beer fa-2x icon-padding clickable"></i>
 						<i class="fa fa-arrow-right fa-2x icon-padding" @click="sidebar = true" v-show="!sidebar"></i>
 						<i id="happy" class="fa fa-smile-o fa-2x icon-padding clickable" @click="happy()"></i>
@@ -102,6 +110,20 @@
 				<button class="btn" @click="createRoom">Create And Join</button>
 			</div>
 		</div>
+
+		<div id="get-password" class="modal">
+			<div class="modal-content">
+				<h4>Join Room {{ join.name }}</h4>
+				<div class="input-field">
+					<label for="passsword">Password</label>
+					<input type="password" v-model="join.password">
+				</div>
+			</div>
+			<div class="modal-footer">
+				<a href="#!" @click="closeModel()" class="modal-close waves-effect waves-green btn-flat">Close</a>
+				<button class="btn" @click="joinRoom(join.data)">Join Room</button>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -112,9 +134,18 @@
 				rooms:[],
 				sidebar: true,
 				message:'',
+				serverMessages:{
+					type:'',
+					content:''
+				},
 				currentRoom: '',
 				user:{
 					name:''
+				},
+				join: {
+					data: null,
+					name: null,
+					password: null
 				},
 				room: {
 					name: '',
@@ -125,7 +156,8 @@
 				socket: null,
 				registered: false,
 				status: '',
-				domModal: null
+				domModal: null,
+				passwordModal: null
 			};
 		},
 		created(){
@@ -134,10 +166,12 @@
 		},
 		mounted(){
 			this.domModal = M.Modal.init(document.querySelector('#create-chat'));			
+			this.passwordModal = M.Modal.init(document.querySelector('#get-password'));			
 			this.getMessage();	
 			this.getTopMessage();
 			this.getRoom();
 			this.joinedRoom();	
+			this.leftRoom();	
 			this.getChatRooms();
 		},
 		methods: {
@@ -151,11 +185,53 @@
 			joinedRoom(){
 				this.socket.on('joinedRoom', (data)=>{
 					this.currentRoom = data;
+					
+					this.join = {
+						name : null,
+						password : null
+					};
+					
 					this.chats = [];
 				})
 			},
+			leftRoom(user){
+				this.socket.on('leaveRoom',() => {
+					this.currentRoom = {id : ''};
+				});
+
+				this.socket.on('userLeft',(data) => {
+					
+					this.serverMessages= {
+						type: 'error',	
+						content : `${data.name} has left the chat`
+					};
+					console.log("User has left",data);
+				});
+				this.socket.on('userJoin',(data) => {
+					this.serverMessages= {
+						type: 'success',	
+						content : `${data.name} has joined the chat`
+					};
+				});
+			},
+			leaveRoom(room){
+				this.socket.emit('leaveRoom',room);
+			},
 			joinRoom(room){
-				this.socket.emit('joinRoom',room);
+				this.join.data = room;
+				if (room.password) {
+					this.join.id = room.id
+					this.join.name = room.name
+
+					if (this.join.password == null) {
+						this.passwordModal.open();
+					}else{
+						room.password = this.join.password;
+						this.socket.emit('joinRoom',room);
+					}
+				}else{
+					this.socket.emit('joinRoom',room);
+				}
 			},
 			getChatRooms(){
 				this.socket.emit('getChatRooms');
@@ -234,7 +310,6 @@
 			},
 			getTopMessage: function(){
 				this.socket.on('topMessage',(message) => {
-					console.log("Messages",message);
 					this.status = message;
 				})
 			},
@@ -259,6 +334,28 @@
 			},
 			openModel(){
 				this.domModal.open();
+			}
+		},
+		computed: {
+			serverErrorClass(){
+				switch (this.serverMessages.type) {
+					case 'error':
+						return 'red darken-4 white-text d-inline-block'
+						break;
+					case 'success':
+						return 'teal darken-4 white-text d-inline-block'
+						break;
+					case 'info':
+						return 'blue darken-4 white-text d-inline-block'
+						break;
+					case 'warning':
+						return 'deep-orange darken-4 white-text d-inline-block'
+						break;
+				
+					default:
+						return 'cyan-orange darken-4 white-text d-inline-block'
+						break;
+				}
 			}
 		},
 		watch: {

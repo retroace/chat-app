@@ -2458,15 +2458,46 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
       rooms: [],
       sidebar: true,
       message: '',
+      serverMessages: {
+        type: '',
+        content: ''
+      },
       currentRoom: '',
       user: {
         name: ''
+      },
+      join: {
+        data: null,
+        name: null,
+        password: null
       },
       room: {
         name: '',
@@ -2477,7 +2508,8 @@ __webpack_require__.r(__webpack_exports__);
       socket: null,
       registered: false,
       status: '',
-      domModal: null
+      domModal: null,
+      passwordModal: null
     };
   },
   created: function created() {
@@ -2486,10 +2518,12 @@ __webpack_require__.r(__webpack_exports__);
   },
   mounted: function mounted() {
     this.domModal = M.Modal.init(document.querySelector('#create-chat'));
+    this.passwordModal = M.Modal.init(document.querySelector('#get-password'));
     this.getMessage();
     this.getTopMessage();
     this.getRoom();
     this.joinedRoom();
+    this.leftRoom();
     this.getChatRooms();
   },
   methods: {
@@ -2505,19 +2539,62 @@ __webpack_require__.r(__webpack_exports__);
 
       this.socket.on('joinedRoom', function (data) {
         _this.currentRoom = data;
+        _this.join = {
+          name: null,
+          password: null
+        };
         _this.chats = [];
       });
     },
+    leftRoom: function leftRoom(user) {
+      var _this2 = this;
+
+      this.socket.on('leaveRoom', function () {
+        _this2.currentRoom = {
+          id: ''
+        };
+      });
+      this.socket.on('userLeft', function (data) {
+        _this2.serverMessages = {
+          type: 'error',
+          content: "".concat(data.name, " has left the chat")
+        };
+        console.log("User has left", data);
+      });
+      this.socket.on('userJoin', function (data) {
+        _this2.serverMessages = {
+          type: 'success',
+          content: "".concat(data.name, " has joined the chat")
+        };
+      });
+    },
+    leaveRoom: function leaveRoom(room) {
+      this.socket.emit('leaveRoom', room);
+    },
     joinRoom: function joinRoom(room) {
-      this.socket.emit('joinRoom', room);
+      this.join.data = room;
+
+      if (room.password) {
+        this.join.id = room.id;
+        this.join.name = room.name;
+
+        if (this.join.password == null) {
+          this.passwordModal.open();
+        } else {
+          room.password = this.join.password;
+          this.socket.emit('joinRoom', room);
+        }
+      } else {
+        this.socket.emit('joinRoom', room);
+      }
     },
     getChatRooms: function getChatRooms() {
-      var _this2 = this;
+      var _this3 = this;
 
       this.socket.emit('getChatRooms');
       this.socket.on('chatRooms', function (room) {
         if (room.length > 0) {
-          _this2.rooms = room;
+          _this3.rooms = room;
         }
       });
     },
@@ -2564,48 +2641,47 @@ __webpack_require__.r(__webpack_exports__);
       }, 400);
     },
     registerUser: function registerUser() {
-      var _this3 = this;
+      var _this4 = this;
 
       if (this.user.name.length > 0) {
         this.socket.emit('newUser', this.user);
         this.socket.emit('register', JSON.stringify(this.user));
         this.socket.on('registered', function () {
-          _this3.registered = true;
+          _this4.registered = true;
 
-          _this3.setStorage();
+          _this4.setStorage();
         });
       }
     },
     getMessage: function getMessage() {
-      var _this4 = this;
+      var _this5 = this;
 
       this.socket.on('chat', function (message) {
-        _this4.chats.push({
+        _this5.chats.push({
           name: message.name,
           message: message.message
         });
 
-        _this4.playSound('notification');
+        _this5.playSound('notification');
 
-        _this4.chatScroll();
+        _this5.chatScroll();
       });
     },
     getTopMessage: function getTopMessage() {
-      var _this5 = this;
+      var _this6 = this;
 
       this.socket.on('topMessage', function (message) {
-        console.log("Messages", message);
-        _this5.status = message;
+        _this6.status = message;
       });
     },
     clearMessage: function clearMessage() {
       this.chats = [];
     },
     getRoom: function getRoom() {
-      var _this6 = this;
+      var _this7 = this;
 
       this.socket.on('newRoom', function (data) {
-        _this6.rooms.push(data);
+        _this7.rooms.push(data);
       });
     },
     createRoom: function createRoom() {
@@ -2621,6 +2697,31 @@ __webpack_require__.r(__webpack_exports__);
     },
     openModel: function openModel() {
       this.domModal.open();
+    }
+  },
+  computed: {
+    serverErrorClass: function serverErrorClass() {
+      switch (this.serverMessages.type) {
+        case 'error':
+          return 'red darken-4 white-text d-inline-block';
+          break;
+
+        case 'success':
+          return 'teal darken-4 white-text d-inline-block';
+          break;
+
+        case 'info':
+          return 'blue darken-4 white-text d-inline-block';
+          break;
+
+        case 'warning':
+          return 'deep-orange darken-4 white-text d-inline-block';
+          break;
+
+        default:
+          return 'cyan-orange darken-4 white-text d-inline-block';
+          break;
+      }
     }
   },
   watch: {
@@ -41525,7 +41626,7 @@ var render = function() {
             expression: "sidebar"
           }
         ],
-        staticClass: "col s3 teal lighten-2 vh-100"
+        staticClass: "col s3 teal darken-1 vh-100"
       },
       [
         _c("div", { staticClass: "jumbotron" }, [
@@ -41585,27 +41686,35 @@ var render = function() {
                   _vm._v("\n\t\t    \t\t" + _vm._s(room.name) + "\n\t\t    \t")
                 ]),
                 _vm._v(" "),
-                _c(
-                  "button",
-                  {
-                    staticClass: "btn btn-primary",
-                    attrs: { disabled: _vm.currentRoom.id == room.id },
-                    on: {
-                      click: function($event) {
-                        return _vm.joinRoom(room)
-                      }
-                    }
-                  },
-                  [
-                    _vm._v(
-                      "\n\t\t    \t\t" +
-                        _vm._s(
-                          _vm.currentRoom.id == room.id ? "Current" : "Join"
-                        ) +
-                        "\n\t\t    \t"
-                    )
-                  ]
-                )
+                _vm.currentRoom.id == room.id
+                  ? _c("div", [
+                      _c(
+                        "button",
+                        {
+                          staticClass: "btn btn-primary",
+                          on: {
+                            click: function($event) {
+                              return _vm.leaveRoom(room)
+                            }
+                          }
+                        },
+                        [_vm._v("\n\t\t\t\t\t\tLeave\n\t\t\t\t\t")]
+                      )
+                    ])
+                  : _c("div", [
+                      _c(
+                        "button",
+                        {
+                          staticClass: "btn btn-primary",
+                          on: {
+                            click: function($event) {
+                              return _vm.joinRoom(room)
+                            }
+                          }
+                        },
+                        [_vm._v("\n\t\t\t\t\t\tJoin\n\t\t\t\t\t")]
+                      )
+                    ])
               ]
             )
           }),
@@ -41615,7 +41724,7 @@ var render = function() {
         _c(
           "p",
           {
-            staticClass: "clickable",
+            staticClass: "clickable dark-set",
             on: {
               click: function($event) {
                 _vm.sidebar = false
@@ -41704,64 +41813,75 @@ var render = function() {
           : _vm._e(),
         _vm._v(" "),
         _c("div", { staticClass: "row mb-0" }, [
-          _c("div", { staticClass: "card horizontal justify absolute top" }, [
-            _c("div", { staticClass: "card-content teal lighten-1" }, [
-              _vm.status
-                ? _c("div", { staticClass: "white-text" }, [
-                    _vm._v(_vm._s(_vm.status))
-                  ])
-                : _c(
-                    "span",
-                    { staticClass: "white-text", attrs: { id: "card-title" } },
-                    [_vm._v("Say Hi in chat")]
-                  )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "card-action" }, [
-              _c("i", {
-                staticClass:
-                  "fa fa-beer action-beer fa-2x icon-padding clickable",
-                attrs: { id: "beer" }
-              }),
+          _c(
+            "div",
+            { staticClass: "card horizontal justify absolute top w-100" },
+            [
+              _c("div", { staticClass: "card-content teal lighten-1" }, [
+                _vm.status
+                  ? _c("div", { staticClass: "white-text" }, [
+                      _vm._v(_vm._s(_vm.status))
+                    ])
+                  : _c(
+                      "span",
+                      {
+                        staticClass: "white-text",
+                        attrs: { id: "card-title" }
+                      },
+                      [_vm._v("Say Hi in chat")]
+                    )
+              ]),
               _vm._v(" "),
-              _c("i", {
-                directives: [
-                  {
-                    name: "show",
-                    rawName: "v-show",
-                    value: !_vm.sidebar,
-                    expression: "!sidebar"
+              _c("div", { staticClass: "card-action" }, [
+                _c("p", { class: _vm.serverErrorClass }, [
+                  _vm._v(_vm._s(_vm.serverMessages.content))
+                ]),
+                _vm._v(" "),
+                _c("i", {
+                  staticClass:
+                    "fa fa-beer action-beer fa-2x icon-padding clickable",
+                  attrs: { id: "beer" }
+                }),
+                _vm._v(" "),
+                _c("i", {
+                  directives: [
+                    {
+                      name: "show",
+                      rawName: "v-show",
+                      value: !_vm.sidebar,
+                      expression: "!sidebar"
+                    }
+                  ],
+                  staticClass: "fa fa-arrow-right fa-2x icon-padding",
+                  on: {
+                    click: function($event) {
+                      _vm.sidebar = true
+                    }
                   }
-                ],
-                staticClass: "fa fa-arrow-right fa-2x icon-padding",
-                on: {
-                  click: function($event) {
-                    _vm.sidebar = true
+                }),
+                _vm._v(" "),
+                _c("i", {
+                  staticClass: "fa fa-smile-o fa-2x icon-padding clickable",
+                  attrs: { id: "happy" },
+                  on: {
+                    click: function($event) {
+                      return _vm.happy()
+                    }
                   }
-                }
-              }),
-              _vm._v(" "),
-              _c("i", {
-                staticClass: "fa fa-smile-o fa-2x icon-padding clickable",
-                attrs: { id: "happy" },
-                on: {
-                  click: function($event) {
-                    return _vm.happy()
+                }),
+                _vm._v(" "),
+                _c("i", {
+                  staticClass: "fa fa-trash-o icon-padding clickable fa-2x",
+                  attrs: { id: "deleteTrash" },
+                  on: {
+                    click: function($event) {
+                      return _vm.clearMessage()
+                    }
                   }
-                }
-              }),
-              _vm._v(" "),
-              _c("i", {
-                staticClass: "fa fa-trash-o icon-padding clickable fa-2x",
-                attrs: { id: "deleteTrash" },
-                on: {
-                  click: function($event) {
-                    return _vm.clearMessage()
-                  }
-                }
-              })
-            ])
-          ])
+                })
+              ])
+            ]
+          )
         ]),
         _vm._v(" "),
         _c(
@@ -41931,6 +42051,66 @@ var render = function() {
         _c("button", { staticClass: "btn", on: { click: _vm.createRoom } }, [
           _vm._v("Create And Join")
         ])
+      ])
+    ]),
+    _vm._v(" "),
+    _c("div", { staticClass: "modal", attrs: { id: "get-password" } }, [
+      _c("div", { staticClass: "modal-content" }, [
+        _c("h4", [_vm._v("Join Room " + _vm._s(_vm.join.name))]),
+        _vm._v(" "),
+        _c("div", { staticClass: "input-field" }, [
+          _c("label", { attrs: { for: "passsword" } }, [_vm._v("Password")]),
+          _vm._v(" "),
+          _c("input", {
+            directives: [
+              {
+                name: "model",
+                rawName: "v-model",
+                value: _vm.join.password,
+                expression: "join.password"
+              }
+            ],
+            attrs: { type: "password" },
+            domProps: { value: _vm.join.password },
+            on: {
+              input: function($event) {
+                if ($event.target.composing) {
+                  return
+                }
+                _vm.$set(_vm.join, "password", $event.target.value)
+              }
+            }
+          })
+        ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "modal-footer" }, [
+        _c(
+          "a",
+          {
+            staticClass: "modal-close waves-effect waves-green btn-flat",
+            attrs: { href: "#!" },
+            on: {
+              click: function($event) {
+                return _vm.closeModel()
+              }
+            }
+          },
+          [_vm._v("Close")]
+        ),
+        _vm._v(" "),
+        _c(
+          "button",
+          {
+            staticClass: "btn",
+            on: {
+              click: function($event) {
+                return _vm.joinRoom(_vm.join.data)
+              }
+            }
+          },
+          [_vm._v("Join Room")]
+        )
       ])
     ])
   ])
