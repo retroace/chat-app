@@ -1,6 +1,6 @@
 <template>
-	<div class="row mb-0">
-		<div class="col s3 teal darken-1 vh-100" v-show="sidebar">
+	<div class="row mb-0 flex">
+		<div class="col m3 teal darken-1 vh-100 left hide-on-med-and-down" v-show="sidebar">
 			<div class="jumbotron">
 				<p class="flow-text white-text">Welcome to Chat Room</p>
 				<p v-if="currentRoom.length">Current Room: {{ currentRoom.name }}</p>
@@ -52,32 +52,23 @@
 			<!-- Chat title -->
 
 			<div class="row mb-0">
-				<div class="card horizontal justify absolute top w-100">
-					<div class="card-content teal lighten-1">
-						<div v-if="status" class="white-text">{{ status }}</div>
-						<span id="card-title" class="white-text" v-else>Say Hi in chat</span> 
-					</div>
-					<div class="card-action">
-						<p :class="serverErrorClass">{{serverMessages.content}}</p>
-						<i id="beer" class="fa fa-beer action-beer fa-2x icon-padding clickable"></i>
-						<i class="fa fa-arrow-right fa-2x icon-padding" @click="sidebar = true" v-show="!sidebar"></i>
-						<i id="happy" class="fa fa-smile-o fa-2x icon-padding clickable" @click="happy()"></i>
-						<i id="deleteTrash" class="fa fa-trash-o icon-padding clickable fa-2x" @click="clearMessage()"></i> 
-					</div>
-				</div> 
+				<nav-bar v-on:nav-actions="navActions($event)" :sidebar="sidebar"></nav-bar>
 			</div>
 
 			<!-- Chat message field -->
 			<div class="flex flex-column overflowy-scroll mb-2" id="chat-message">
 			    <div v-for="chat in chats">
-			    	<div v-if="chat.name == user.name" class="flex-row-reverse">
+			    	<div v-if="(chat.name == user.name) && chat.action == false " class="flex-row-reverse">
 			    		<i class="material-icons">person</i>
 				    	<span class="blue lighten-5 chat-message">{{ chat.message }}</span>    		
 			    	</div>
-			    	<div v-else>
+			    	<div v-else-if="chat.action == false">
 				    	<span class="chat-name">{{ chat.name }}</span>
 				    	<span class="teal lighten-2 chat-message">{{ chat.message }}</span>
 			    	</div>
+					<div class="user-tag badge" v-else>
+						{{ chat.message }}
+					</div>
 			    </div>
 			</div>
 				
@@ -180,8 +171,53 @@
 			this.leftRoom();
 			this.getOnlineUsers();	
 			this.getChatRooms();
+			this.userEvents();
 		},
 		methods: {
+			navActions(data){
+				switch (data) {
+					case 'clear-chat-message':
+						this.chats = []; 
+						break;
+					case 'showSidebar':
+						this.sidebar = true; 
+						break;
+					case 'action-beer':
+						this.socket.emit('action',"beer"); 
+						break;
+					default:
+						break;
+				}
+			},
+			userEvents(){
+				this.socket.on("userDisconnected", (data) => {
+					this.status = data.name + " has disconnected from the chat";
+				});
+
+				this.socket.on("userConnected", (data) => {
+					this.status = data.name + " has connected to chat";
+				});
+
+				this.socket.on("taggedUser", (data) => {
+					this.status = data.name + " has connected to chat";
+				});
+
+				this.socket.on("action", (data) => {
+					switch(data.name){
+						case 'sayInChat':
+							this.chats.push({
+								name: this.data.user,
+								message: this.filterEmojiFromText(this.message),
+								action: true
+							});
+							break;
+						default:
+							return null;
+							break;
+					}
+				});
+					
+			},
 			getOnlineUsers(){
 				this.socket.on('onlineUsers', (data) => {
 					const { total , users } = data;
@@ -283,13 +319,18 @@
 			},
 			sendMessage: function(){
 				if (this.message.trim().length) {
-					this.socket.emit('message', this.message);
+					if(this.message.trim().substr(0,10) == "\\sayInChat")
+					{
+						this.anounce(this.message);
+					}else{
+						this.socket.emit('message', this.message);
+						this.chats.push({
+							name: this.user.name,
+							message: this.filterEmojiFromText(this.message),
+							action: false
+						});
 
-					this.chats.push({
-						name: this.user.name,
-						message: this.message
-					});
-
+					}
 					this.message = '';
 				}
 				this.chatScroll();
@@ -316,8 +357,9 @@
 				this.socket.on('chat', (message) => {
 					this.chats.push({
 						name: message.name,
-						message: message.message
+						message: this.filterEmojiFromText(message.message)
 					});
+					
 					this.playSound('notification');
 				
 					this.chatScroll();
@@ -349,28 +391,56 @@
 			},
 			openModel(){
 				this.domModal.open();
-			}
-		},
-		computed: {
-			serverErrorClass(){
-				switch (this.serverMessages.type) {
-					case 'error':
-						return 'red darken-4 white-text d-inline-block'
-						break;
-					case 'success':
-						return 'teal darken-4 white-text d-inline-block'
-						break;
-					case 'info':
-						return 'blue darken-4 white-text d-inline-block'
-						break;
-					case 'warning':
-						return 'deep-orange darken-4 white-text d-inline-block'
-						break;
+			},
+			anounce(data){
+				this.socket.emit('action',{
+					name: "sayInChat", 
+					message: this.user.name+ " wants to say : "+ data.substr(10)
+				});
+
+				this.chats.push({
+					name: this.user.name,
+					message: this.user.name+ " wants to say : "+ this.filterEmojiFromText(data.substr(10)),
+					action: true
+				});
+			},
+			filterEmojiFromText(text){
+				var emojis = [
+					[":D","😂"],
+					[":)","🙂"],
+					[":))","😀"],
+					[":P","😜"],
+					[":>P<","😝"],
+					[":><","😄"],
+					[">:(","😆"],
+					[":'","😅"],
+					["","🤣"],
+					["^_^","😊"],
+					[":.).","️😌"],
+					[":.<","😉"],
+					[":`)","😏"],
+					[":LO","😍"],
+					[":cl","😘"],
+					[":c","😗"],
+					[":()","🤑"],
+					[":O-O","😎"],
+					[":O-|O","🤓"],
+					["O.O","😶"],
+					["-_-","😑"],
+					["","😞"]
+				];
+				// Regex start with whitespace but break in whitespace
+				// /(\s+:\S*)/g
+				text = " "+text.trim();
 				
-					default:
-						return 'cyan-orange darken-4 white-text d-inline-block'
-						break;
-				}
+				return text.toString().replace(/(\s+:\S*)/g,(data) => {
+					for(var i =0 ; i < emojis.length; i++){
+						if(data.trim().toLowerCase() == emojis[i][0].toLowerCase()){
+							return " "+emojis[i][1];
+						}
+					}
+					return data ;
+				});
 			}
 		},
 		watch: {
@@ -396,5 +466,10 @@
 	}
 	#beer:hover{
 		color: #ff8a65;
+	}
+	.user-tag{
+		background: #0000000d;
+		padding: 10px;
+		font-weight: bold;
 	}
 </style>
