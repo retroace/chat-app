@@ -59,7 +59,8 @@ io.on('connection', (socket) => {
 		
 		var message = {
 			"name": socket.name,
-			"message": msg
+			"message": msg,
+			action: false
 		}
 		
 		if (socket.name != null) {
