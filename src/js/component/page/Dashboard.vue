@@ -206,8 +206,8 @@
 					switch(data.name){
 						case 'sayInChat':
 							this.chats.push({
-								name: this.data.user,
-								message: this.filterEmojiFromText(this.message),
+								name: data.user,
+								message: this.filterEmojiFromText(data.message),
 								action: true
 							});
 							break;

@@ -473,8 +473,8 @@ __webpack_require__.r(__webpack_exports__);
         switch (data.name) {
           case 'sayInChat':
             _this.chats.push({
-              name: _this.data.user,
-              message: _this.filterEmojiFromText(_this.message),
+              name: data.user,
+              message: _this.filterEmojiFromText(data.message),
               action: true
             });
 
