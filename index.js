@@ -58,8 +58,8 @@ io.on('connection', (socket) => {
 		}
 		
 		var message = {
-			"name": socket.name,
-			"message": msg,
+			name: socket.name,
+			message: msg,
 			action: false
 		}
 		

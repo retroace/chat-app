@@ -357,7 +357,8 @@
 				this.socket.on('chat', (message) => {
 					this.chats.push({
 						name: message.name,
-						message: this.filterEmojiFromText(message.message)
+						message: this.filterEmojiFromText(message.message),
+						action: false
 					});
 					
 					this.playSound('notification');
