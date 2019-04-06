@@ -54,6 +54,9 @@
 .overflowy-scroll{
   overflow-y: scroll;
 }
+.mt-0{
+  margin-top: 0px;
+}
 .mb-0{
   margin-bottom: 0;
 }
@@ -62,7 +65,7 @@
 }
 
 .icon-padding{
-	padding: 5px;
+	padding: 5px 5px 5px 0;
 }
 .clickable{
 	cursor: pointer;

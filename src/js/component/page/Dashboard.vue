@@ -1,48 +1,15 @@
 <template>
 	<div class="row mb-0 flex">
-		<div class="col m3 teal darken-1 vh-100 left hide-on-med-and-down" v-show="sidebar">
-			<div class="jumbotron">
-				<p class="flow-text white-text">Welcome to Chat Room</p>
-				<p v-if="currentRoom.length">Current Room: {{ currentRoom.name }}</p>
-				<p class="white-text">Online Users: {{ onlineUsers }}</p>
-				<div class="w-100">
-					<span class="icon-padding white-text" v-for="user in users">{{ user }}</span>
-				</div>
-			</div>
-			<div class="blue-grey card horizontal space-between w-100" style="padding: 0 10px;">
-				<p class="title white-text flex-column-center">Chat rooms</p>
-				<p class="transparent btn-floating" @click="openModel()">
-					<i class="material-icons clickable white-text" title="Create Chat Room">
-						add_circle_outline
-					</i>
-				</p>
-			</div>
-			<ul class="collection">
-			    <li class="collection-item flex space-between" v-for="room in rooms">
-			    	<a class="chat-room w-100 flex-column-center">
-			    		{{ room.name }}
-			    	</a>
-					<div v-if="currentRoom.id == room.id">
-						<button class="btn btn-primary" @click="leaveRoom(room)">
-							Leave
-						</button>
-					</div>
-					<div v-else>
-						<button class="btn btn-primary" @click="joinRoom(room)">
-							Join
-						</button>
-					</div>
-			    </li>
-			</ul>
-			<p class="clickable dark-set" @click="sidebar = false">Hide Sidebar</p>
+		<div class="col m3 teal darken-1 vh-100 left hide-on-small-only" v-show="sidebar">
+			<Sidebar />
 		</div>
 
 
-		<div class="relative flex-column bg-light vh-100 col s9" id="chat-section">
+		<div class="relative flex-column bg-light vh-100 col m9 s12" id="chat-section">
 			<div class="flex-column-center v-all overlay all-0 f-column"  v-if="!registered">
 				<div class="vertical-center flex-center col s6 m-auto">		
 					<div class="input-field">
-						<input placeholder="Enter Your Name" v-model="user.name" type="text" class="validate white-text" @keyup.enter="registerUser()">
+						<input placeholder="Enter Your Name" v-model="user.name" type="text" class="validate white-text" @keyup.enter="registerUser()" autofocus>
 					</div>
 					<button type="submit" class="btn" @click="registerUser()">Submit</button>
 				</div>
@@ -52,12 +19,18 @@
 			<!-- Chat title -->
 
 			<div class="row mb-0">
-				<nav-bar v-on:nav-actions="navActions($event)" :sidebar="sidebar"></nav-bar>
+				<nav-bar 
+					v-on:nav-actions="navActions($event)" 
+					:sidebar="sidebar"
+					:currentRoom="currentRoom" 
+					:users="users"
+					:rooms="rooms"
+					/>
 			</div>
 
 			<!-- Chat message field -->
 			<div class="flex flex-column overflowy-scroll mb-2" id="chat-message">
-			    <div v-for="chat in chats">
+			    <div v-for="chat in $store.state.chats">
 			    	<div v-if="(chat.name == user.name) && chat.action == false " class="flex-row-reverse">
 			    		<i class="material-icons">person</i>
 				    	<span class="blue lighten-5 chat-message">{{ chat.message }}</span>    		
@@ -86,86 +59,45 @@
 				</form>
 			</div>
 		</div>
+		<password-modal :open="$store.state.passwordModal" :room="room"/>
 		<div id="sound"></div>
-		
-		<div id="create-chat" class="modal">
-			<div class="modal-content">
-				<h4>Create A Chat Room</h4>
-				<div class="input-field">
-					<label for="name">Room name</label>
-					<input type="text" v-model="room.name" autofocus>
-				</div>
-				<div class="input-field">
-					<label for="passsword">Password</label>
-					<input type="password" v-model="room.password">
-				</div>
-			</div>
-			<div class="modal-footer">
-				<a href="#!" @click="closeModel()" class="modal-close waves-effect waves-green btn-flat">Close</a>
-				<button class="btn" @click="createRoom">Create And Join</button>
-			</div>
-		</div>
-
-		<div id="get-password" class="modal">
-			<div class="modal-content">
-				<h4>Join Room {{ join.name }}</h4>
-				<div class="input-field">
-					<label for="passsword">Password</label>
-					<input type="password" v-model="join.password">
-				</div>
-			</div>
-			<div class="modal-footer">
-				<a href="#!" @click="closeModel()" class="modal-close waves-effect waves-green btn-flat">Close</a>
-				<button class="btn" @click="joinRoom(join.data)">Join Room</button>
-			</div>
-		</div>
 	</div>
 </template>
 
 <script>
+	import passwordModal from './../modal/PasswordModal.vue';
+	import Sidebar from './../sidebar/Sidebar.vue';
 	export default ({
+		components: {
+			passwordModal,
+			Sidebar
+		},
 		data(){
 			return {
+				passwordModal: false,
 				rooms:[],
 				sidebar: true,
 				message:'',
-				serverMessages:{
-					type:'',
-					content:''
-				},
 				currentRoom: '',
 				user:{
 					name:''
 				},
-				join: {
-					data: null,
-					name: null,
-					password: null
-				},
-				room: {
-					name: '',
-					password: ''
-				},
+				room: null,
 				onlineUsers: null,
 				users: null,
-				model: false,
 				chats: [],
 				socket: null,
 				registered: false,
 				status: '',
-				domModal: null,
-				passwordModal: null
 			};
 		},
 		created(){
 			this.socket = window.socket;
+			this.$store.commit('setSocket',this.socket);
 			this.checkStorage();
 		},
 		mounted(){
-			this.domModal = M.Modal.init(document.querySelector('#create-chat'));			
-			this.passwordModal = M.Modal.init(document.querySelector('#get-password'));			
 			this.getMessage();	
-			this.getTopMessage();
 			this.getRoom();
 			this.joinedRoom();	
 			this.leftRoom();
@@ -223,8 +155,8 @@
 					const { total , users } = data;
 					this.onlineUsers = total; 
 					this.users = users;
-					console.log(data); 
-				})
+					this.$store.commit('setUsers', users);
+				});
 			},
 			chatDisabled(room){
 				if(room.id = this.currentRoom.id)
@@ -236,51 +168,33 @@
 			joinedRoom(){
 				this.socket.on('joinedRoom', (data)=>{
 					this.currentRoom = data;
-					this.passwordModal.close();
-					this.join = {
-						name : null,
-						password : null
-					};
-					
-					this.chats = [];
+					this.$store.dispatch('joinedRoom', data);
 				})
 			},
 			leftRoom(user){
 				this.socket.on('leaveRoom',() => {
 					this.currentRoom = {id : ''};
 				});
-
+				
+				// User leaved the chat
 				this.socket.on('userLeft',(data) => {
-					
-					this.serverMessages= {
-						type: 'error',	
-						content : `${data.name} has left the chat`
-					};
+
 				});
+
+				// User joined the chat
 				this.socket.on('userJoin',(data) => {
-					this.serverMessages= {
-						type: 'success',	
-						content : `${data.name} has joined the chat`
-					};
 				});
 			},
 			leaveRoom(room){
 				this.socket.emit('leaveRoom',room);
 			},
 			joinRoom(room){
-				this.join.data = room;
+				// Room has password
 				if (room.password) {
-					this.join.id = room.id
-					this.join.name = room.name
-
-					if (this.join.password == null) {
-						this.passwordModal.open();
-					}else{
-						room.password = this.join.password;
-						this.socket
-						.emit('joinRoom',room);
-					}
+					this.room = room;
+					this.passwordModal = true;
 				}else{
+					// No password
 					this.socket.emit('joinRoom',room);
 				}
 			},
@@ -297,6 +211,7 @@
 				if (content != null) {
 					content = JSON.parse(content);
 					this.user.name = content.name;
+					this.$store.commit('setUser',content);
 					this.registerUser();
 				}
 			},
@@ -314,9 +229,6 @@
 				var embedSource = '<embed hidden="true" autostart="true" loop="false" src="/public/sounds/' + filename +'.mp3">';
 				document.getElementById("sound").innerHTML='<audio autoplay="autoplay">' + oggSource + embedSource + '</audio>';
 			},
-			happy: function(){
-				this.playSound('aud');
-			},
 			sendMessage: function(){
 				if (this.message.trim().length) {
 					if(this.message.trim().substr(0,10) == "\\sayInChat")
@@ -324,12 +236,6 @@
 						this.anounce(this.message);
 					}else{
 						this.socket.emit('message', this.message);
-						this.chats.push({
-							name: this.user.name,
-							message: this.filterEmojiFromText(this.message),
-							action: false
-						});
-
 					}
 					this.message = '';
 				}
@@ -355,55 +261,40 @@
 			},
 			getMessage: function(){
 				this.socket.on('chat', (message) => {
-					this.chats.push({
+					let data = {
 						name: message.name,
 						message: this.filterEmojiFromText(message.message),
 						action: false
-					});
+					};
+					this.$store.commit('setChats', data);
 					
-					this.playSound('notification');
+					if(data.name !== this.user.name)
+					{
+						this.playSound('notification');
+					}
 				
 					this.chatScroll();
 				});
-			},
-			getTopMessage: function(){
-				this.socket.on('topMessage',(message) => {
-					this.status = message;
-				})
 			},
 			clearMessage: function(){
 				this.chats = [];
 			},
 			getRoom: function(){
 				this.socket.on('newRoom', (data) => {
-					this.rooms.push(data);
+					this.$store.commit('appendRooms', data);
 				})
-			},
-			createRoom: function(){
-				this.closeModel();
-				socket.emit('newRoom',this.room);
-				this.room = {
-					name: '',
-					password: ''
-				};
-			},
-			closeModel(){
-				this.domModal.close();
-			},
-			openModel(){
-				this.domModal.open();
 			},
 			anounce(data){
 				this.socket.emit('action',{
 					name: "sayInChat", 
 					message: this.user.name+ " wants to say : "+ data.substr(10)
 				});
-
-				this.chats.push({
+				let message = {
 					name: this.user.name,
 					message: this.user.name+ " wants to say : "+ this.filterEmojiFromText(data.substr(10)),
 					action: true
-				});
+				};
+				this.$store.commit('setChats', message);
 			},
 			filterEmojiFromText(text){
 				var emojis = [
@@ -426,9 +317,10 @@
 					[":()","🤑"],
 					[":O-O","😎"],
 					[":O-|O","🤓"],
-					["O.O","😶"],
-					["-_-","😑"],
-					["","😞"]
+					[":O.O","😶"],
+					[":-_-","😑"],
+					[":-(","😞"],
+					[":-O|","😱"]
 				];
 				// Regex start with whitespace but break in whitespace
 				// /(\s+:\S*)/g
@@ -444,30 +336,13 @@
 				});
 			}
 		},
-		watch: {
-			model(){
-				if (this.model) {
-					this.domModal.openModel();
-				}else{
-					this.domModal.closeModel();
-				}
-			}
-		}
+		
 
 	});
 </script>
 
 
 <style scoped="">
-	#deleteTrash:hover{
-		color: #EF9A9A;
-	}
-	#happy:hover{
-		color: #f9a825;
-	}
-	#beer:hover{
-		color: #ff8a65;
-	}
 	.user-tag{
 		background: #0000000d;
 		padding: 10px;
