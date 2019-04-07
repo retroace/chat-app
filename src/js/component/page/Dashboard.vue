@@ -22,9 +22,6 @@
 				<nav-bar 
 					v-on:nav-actions="navActions($event)" 
 					:sidebar="sidebar"
-					:currentRoom="currentRoom" 
-					:users="users"
-					:rooms="rooms"
 					/>
 			</div>
 
@@ -48,7 +45,7 @@
 			<!-- Chat message field -->
 			<div  class="w-100">
 				<form id="chat-form" action="" method="" accept-charset="utf-8">
-					<div class="input-field file-field">
+					<div class="input-field file-field mb-0">
 						<div class="btn">
 							<span>Message</span>
 						</div>	
@@ -59,7 +56,7 @@
 				</form>
 			</div>
 		</div>
-		<password-modal :open="$store.state.passwordModal" :room="room"/>
+		<password-modal />
 		<div id="sound"></div>
 	</div>
 </template>
@@ -104,8 +101,14 @@
 			this.getOnlineUsers();	
 			this.getChatRooms();
 			this.userEvents();
+			this.unregistered();
 		},
 		methods: {
+			unregistered(data){
+				this.socket.on('unregistered', () => {
+					this.checkStorage();
+				});
+			},
 			navActions(data){
 				switch (data) {
 					case 'clear-chat-message':
@@ -137,7 +140,7 @@
 				this.socket.on("action", (data) => {
 					switch(data.name){
 						case 'sayInChat':
-							this.chats.push({
+							this.$store.commit('setChats', {
 								name: data.user,
 								message: this.filterEmojiFromText(data.message),
 								action: true
@@ -202,6 +205,7 @@
 				this.socket.emit('getChatRooms');
 				this.socket.on('chatRooms',(room) => {
 					if (room.length > 0) {
+						this.$store.commit('setRooms',room);						
 						this.rooms = room;
 					}
 				});
@@ -289,12 +293,6 @@
 					name: "sayInChat", 
 					message: this.user.name+ " wants to say : "+ data.substr(10)
 				});
-				let message = {
-					name: this.user.name,
-					message: this.user.name+ " wants to say : "+ this.filterEmojiFromText(data.substr(10)),
-					action: true
-				};
-				this.$store.commit('setChats', message);
 			},
 			filterEmojiFromText(text){
 				var emojis = [

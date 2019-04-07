@@ -17,7 +17,7 @@
                     </button>
                 </div>
                 <div v-else>
-                    <button class="btn btn-primary" @click="$store.dispatch('joinRoom',room)">
+                    <button class="btn btn-primary" @click="$store.dispatch('joinRoomModal',room)">
                         Join
                     </button>
                 </div>

@@ -64,7 +64,11 @@ const socketConnection = (socket,io) => {
 			name: socket.name,
 			message: data
 		};
-		io.to(currentRoom.id).emit('chat', chatData);
+		if(socket.name == undefined){
+			socket.emit('unregistered');
+		}else{
+			io.to(currentRoom.id).emit('chat', chatData);
+		}
 	});
 	
 	// User Actions
@@ -77,7 +81,7 @@ const socketConnection = (socket,io) => {
 					});
 				break;
 			case 'sayInChat':
-				socket.to(currentRoom.id)
+				io.to(currentRoom.id)
 					.emit('action',{
 						name: 'sayInChat',
 						user: socket.name,
@@ -169,9 +173,13 @@ const socketConnection = (socket,io) => {
 			id: uniqueID(),
 			name: room.name,
 			password: room.password,
-			admin: socket.name
+			admin: {
+				id: socket.id,
+				name: socket.name
+			}
 		};
-		
+
+		// Change Current room id
 		socketUserCount.room[currentRoom.id]--;
 		socket.join(roomDetail.id);
 		chatRoom.push(roomDetail);
@@ -202,7 +210,7 @@ const socketConnection = (socket,io) => {
 
 		// The room user wanted to enter
 		var wantedRoom = chatRoom.filter( (item,index) =>{
-			if (item.name == roomData.name) {
+			if (item.id == roomData.id) {
 				return true;
 			}
 			return false;
@@ -240,14 +248,12 @@ const socketConnection = (socket,io) => {
 					socketUserCount.room[currentRoom.id]++;
 					
 					socket.emit("joinedRoom", newWantedRoom);
+				}else{
+					socket.emit("joinRoomError", {message: "Incorrect password"});
 				}
 			}
-		}else if (wantedRoom.length > 1) {
-			if (room.password == '') {
-				socket.emit('getPassword',roomData);	
-			}
-			
-			socket.emit('message', extra.invalidCredential);	
+		}else{
+			socket.on('joinRoomError',roomData);
 		}
 	});
 
@@ -276,7 +282,7 @@ const socketConnection = (socket,io) => {
 			io.to(currentRoom.id).emit('userDisconnected', {name: socket.name});
 		}
 	});
-	
+
 	// User wants to get all chat rooms
 	socket.on('getChatRooms',() => {
 		let clonedChatRoom = JSON.parse(JSON.stringify(chatRoom));

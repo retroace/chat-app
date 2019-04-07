@@ -189,34 +189,33 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
-  props: ['room'],
   data: function data() {
     return {
-      modal: null,
       join: {
         name: '',
         password: ''
-      }
+      },
+      error: ''
     };
+  },
+  mounted: function mounted() {
+    var _this = this;
+
+    window.socket.on('joinRoomError', function (data) {
+      _this.error = data.message;
+    });
   },
   methods: {
     joinRoom: function joinRoom(data) {
-      this.join.data = room;
-
-      if (room.password) {
-        this.join.id = room.id;
-        this.join.name = room.name;
-
-        if (this.join.password == null) {
-          this.passwordModal.open();
-        } else {
-          room.password = this.join.password;
-          $store.dispatch('joinRoom', room);
-        }
-      } else {
-        $store.dispatch('joinRoom', room);
-      }
+      var room = this.$store.state.joinRoom;
+      room.password = this.join.password;
+      this.$store.commit('setJoinRoom', room);
+      this.$store.dispatch('joinRoom', room);
     }
   }
 });
@@ -308,7 +307,7 @@ __webpack_require__.r(__webpack_exports__);
 //
 
 /* harmony default export */ __webpack_exports__["default"] = ({
-  props: ['sidebar', 'currentRoom', 'users', "rooms"],
+  props: ['sidebar'],
   components: {
     mobileNav: _mobileNav_vue__WEBPACK_IMPORTED_MODULE_0__["default"]
   },
@@ -318,8 +317,6 @@ __webpack_require__.r(__webpack_exports__);
       joinedRoom: {
         "name": "Global Room"
       },
-      onlineUsers: null,
-      currentUsers: [],
       room: {
         name: '',
         password: ''
@@ -329,7 +326,6 @@ __webpack_require__.r(__webpack_exports__);
         name: null,
         password: null
       },
-      chatRooms: [],
       domModal: null
     };
   },
@@ -339,8 +335,17 @@ __webpack_require__.r(__webpack_exports__);
   },
   methods: {
     closeModel: function closeModel() {
+      if (this.domModal === null) {
+        this.domModal = M.Modal.init(window.document.querySelector('#create-chat'));
+      }
+
       if (this.domModal.isOpen) {
         this.domModal.close();
+        var data = {
+          name: '',
+          password: ''
+        };
+        this.room = data;
       }
     },
     createRoom: function createRoom() {
@@ -348,9 +353,11 @@ __webpack_require__.r(__webpack_exports__);
         name: '',
         password: ''
       };
-      this.$store.dispatch('createRoom', this.room);
-      this.room = data;
-      this.closeModel();
+
+      if (this.room.name.length > 2) {
+        this.$store.dispatch('createRoom', this.room);
+        this.closeModel();
+      }
     },
     openModal: function openModal() {
       if (this.domModal === null) {
@@ -359,7 +366,7 @@ __webpack_require__.r(__webpack_exports__);
 
       if (!this.domModal.isOpen) {
         this.domModal.open();
-        this.$refs.roomName.focus();
+        this.$refs.roomname.focus();
       }
     }
   }
@@ -423,10 +430,6 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
-//
-//
-//
-//
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
@@ -436,8 +439,7 @@ __webpack_require__.r(__webpack_exports__);
       rooms: false,
       currentUsers: []
     };
-  },
-  mounted: function mounted() {}
+  }
 });
 
 /***/ }),
@@ -453,9 +455,6 @@ __webpack_require__.r(__webpack_exports__);
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _modal_PasswordModal_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./../modal/PasswordModal.vue */ "./src/js/component/modal/PasswordModal.vue");
 /* harmony import */ var _sidebar_Sidebar_vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./../sidebar/Sidebar.vue */ "./src/js/component/sidebar/Sidebar.vue");
-//
-//
-//
 //
 //
 //
@@ -558,8 +557,16 @@ __webpack_require__.r(__webpack_exports__);
     this.getOnlineUsers();
     this.getChatRooms();
     this.userEvents();
+    this.unregistered();
   },
   methods: {
+    unregistered: function unregistered(data) {
+      var _this = this;
+
+      this.socket.on('unregistered', function () {
+        _this.checkStorage();
+      });
+    },
     navActions: function navActions(data) {
       switch (data) {
         case 'clear-chat-message':
@@ -579,23 +586,23 @@ __webpack_require__.r(__webpack_exports__);
       }
     },
     userEvents: function userEvents() {
-      var _this = this;
+      var _this2 = this;
 
       this.socket.on("userDisconnected", function (data) {
-        _this.status = data.name + " has disconnected from the chat";
+        _this2.status = data.name + " has disconnected from the chat";
       });
       this.socket.on("userConnected", function (data) {
-        _this.status = data.name + " has connected to chat";
+        _this2.status = data.name + " has connected to chat";
       });
       this.socket.on("taggedUser", function (data) {
-        _this.status = data.name + " has connected to chat";
+        _this2.status = data.name + " has connected to chat";
       });
       this.socket.on("action", function (data) {
         switch (data.name) {
           case 'sayInChat':
-            _this.chats.push({
+            _this2.$store.commit('setChats', {
               name: data.user,
-              message: _this.filterEmojiFromText(data.message),
+              message: _this2.filterEmojiFromText(data.message),
               action: true
             });
 
@@ -608,15 +615,15 @@ __webpack_require__.r(__webpack_exports__);
       });
     },
     getOnlineUsers: function getOnlineUsers() {
-      var _this2 = this;
+      var _this3 = this;
 
       this.socket.on('onlineUsers', function (data) {
         var total = data.total,
             users = data.users;
-        _this2.onlineUsers = total;
-        _this2.users = users;
+        _this3.onlineUsers = total;
+        _this3.users = users;
 
-        _this2.$store.commit('setUsers', users);
+        _this3.$store.commit('setUsers', users);
       });
     },
     chatDisabled: function chatDisabled(room) {
@@ -627,19 +634,19 @@ __webpack_require__.r(__webpack_exports__);
       return '';
     },
     joinedRoom: function joinedRoom() {
-      var _this3 = this;
+      var _this4 = this;
 
       this.socket.on('joinedRoom', function (data) {
-        _this3.currentRoom = data;
+        _this4.currentRoom = data;
 
-        _this3.$store.dispatch('joinedRoom', data);
+        _this4.$store.dispatch('joinedRoom', data);
       });
     },
     leftRoom: function leftRoom(user) {
-      var _this4 = this;
+      var _this5 = this;
 
       this.socket.on('leaveRoom', function () {
-        _this4.currentRoom = {
+        _this5.currentRoom = {
           id: ''
         };
       }); // User leaved the chat
@@ -662,12 +669,14 @@ __webpack_require__.r(__webpack_exports__);
       }
     },
     getChatRooms: function getChatRooms() {
-      var _this5 = this;
+      var _this6 = this;
 
       this.socket.emit('getChatRooms');
       this.socket.on('chatRooms', function (room) {
         if (room.length > 0) {
-          _this5.rooms = room;
+          _this6.$store.commit('setRooms', room);
+
+          _this6.rooms = room;
         }
       });
     },
@@ -713,45 +722,45 @@ __webpack_require__.r(__webpack_exports__);
       }, 400);
     },
     registerUser: function registerUser() {
-      var _this6 = this;
+      var _this7 = this;
 
       if (this.user.name.length > 0) {
         this.socket.emit('newUser', this.user);
         this.socket.emit('register', JSON.stringify(this.user));
         this.socket.on('registered', function () {
-          _this6.registered = true;
+          _this7.registered = true;
 
-          _this6.setStorage();
+          _this7.setStorage();
         });
       }
     },
     getMessage: function getMessage() {
-      var _this7 = this;
+      var _this8 = this;
 
       this.socket.on('chat', function (message) {
         var data = {
           name: message.name,
-          message: _this7.filterEmojiFromText(message.message),
+          message: _this8.filterEmojiFromText(message.message),
           action: false
         };
 
-        _this7.$store.commit('setChats', data);
+        _this8.$store.commit('setChats', data);
 
-        if (data.name !== _this7.user.name) {
-          _this7.playSound('notification');
+        if (data.name !== _this8.user.name) {
+          _this8.playSound('notification');
         }
 
-        _this7.chatScroll();
+        _this8.chatScroll();
       });
     },
     clearMessage: function clearMessage() {
       this.chats = [];
     },
     getRoom: function getRoom() {
-      var _this8 = this;
+      var _this9 = this;
 
       this.socket.on('newRoom', function (data) {
-        _this8.$store.commit('appendRooms', data);
+        _this9.$store.commit('appendRooms', data);
       });
     },
     anounce: function anounce(data) {
@@ -759,12 +768,6 @@ __webpack_require__.r(__webpack_exports__);
         name: "sayInChat",
         message: this.user.name + " wants to say : " + data.substr(10)
       });
-      var message = {
-        name: this.user.name,
-        message: this.user.name + " wants to say : " + this.filterEmojiFromText(data.substr(10)),
-        action: true
-      };
-      this.$store.commit('setChats', message);
     },
     filterEmojiFromText: function filterEmojiFromText(text) {
       var emojis = [[":D", "😂"], [":)", "🙂"], [":))", "😀"], [":P", "😜"], [":>P<", "😝"], [":><", "😄"], [">:(", "😆"], [":'", "😅"], ["", "🤣"], ["^_^", "😊"], [":.).", "️😌"], [":.<", "😉"], [":`)", "😏"], [":LO", "😍"], [":cl", "😘"], [":c", "😗"], [":()", "🤑"], [":O-O", "😎"], [":O-|O", "🤓"], [":O.O", "😶"], [":-_-", "😑"], [":-(", "😞"], [":-O|", "😱"]]; // Regex start with whitespace but break in whitespace
@@ -11411,10 +11414,29 @@ var render = function() {
   var _c = _vm._self._c || _h
   return _c("div", { staticClass: "modal", attrs: { id: "get-password" } }, [
     _c("div", { staticClass: "modal-content" }, [
-      _c("h4", [_vm._v("Join Room " + _vm._s(_vm.join.name))]),
+      _c("h4", [
+        _vm._v(
+          "Join Room " +
+            _vm._s(_vm.join.name) +
+            " (" +
+            _vm._s(_vm.$store.state.joinRoom.name) +
+            ")"
+        )
+      ]),
+      _vm._v(" "),
+      _vm.error
+        ? _c("p", { staticClass: "red-text" }, [_vm._v(_vm._s(_vm.error))])
+        : _vm._e(),
       _vm._v(" "),
       _c("div", { staticClass: "input-field" }, [
-        _c("label", { attrs: { for: "passsword" } }, [_vm._v("Password")]),
+        _c("input", {
+          attrs: { type: "text", name: "name", disabled: "" },
+          domProps: { value: _vm.$store.state.joinRoom.name }
+        })
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "input-field" }, [
+        _c("label", { attrs: { for: "password" } }, [_vm._v("Password")]),
         _vm._v(" "),
         _c("input", {
           directives: [
@@ -11425,7 +11447,7 @@ var render = function() {
               expression: "join.password"
             }
           ],
-          attrs: { type: "password" },
+          attrs: { type: "password", name: "password" },
           domProps: { value: _vm.join.password },
           on: {
             input: function($event) {
@@ -11460,7 +11482,7 @@ var render = function() {
           staticClass: "btn",
           on: {
             click: function($event) {
-              return _vm.joinRoom(_vm.join)
+              return _vm.joinRoom()
             }
           }
         },
@@ -11527,12 +11549,12 @@ var render = function() {
                     [
                       _vm._v(
                         "\n                                Online Users: " +
-                          _vm._s(_vm.currentUsers.length) +
+                          _vm._s(_vm.$store.state.users.length) +
                           "\n                                "
                       ),
                       _c("br"),
                       _vm._v(" "),
-                      _vm._l(_vm.currentUsers, function(user) {
+                      _vm._l(_vm.$store.state.users, function(user) {
                         return user
                           ? _c("span", { staticClass: "icon-padding" }, [
                               _vm._v(
@@ -11640,7 +11662,7 @@ var render = function() {
                     attrs: { id: "deleteTrash" },
                     on: {
                       click: function($event) {
-                        return _vm.$emit("nav-actions", "clear-chat-message")
+                        return _vm.$store.commit("removeAllChatMessages")
                       }
                     }
                   })
@@ -11667,7 +11689,7 @@ var render = function() {
                   expression: "room.name"
                 }
               ],
-              ref: "roomName",
+              ref: "roomname",
               attrs: { type: "text" },
               domProps: { value: _vm.room.name },
               on: {
@@ -11799,7 +11821,7 @@ var render = function() {
           _c("p", { staticClass: "pt-0 pb-0 mt-0 mb-0" }, [
             _vm._v("Online Users: "),
             _c("span", { staticClass: "badge teal lighten-2 white-text" }, [
-              _vm._v(_vm._s(_vm.currentUsers.length))
+              _vm._v(_vm._s(_vm.$store.state.users.length))
             ])
           ])
         ])
@@ -11816,7 +11838,8 @@ var render = function() {
               _c(
                 "div",
                 {
-                  staticClass: "flow-text white-text flex-column-center",
+                  staticClass:
+                    "flow-text white-text flex-column-center clickable",
                   on: {
                     click: function($event) {
                       _vm.navOpen = false
@@ -11831,7 +11854,48 @@ var render = function() {
               )
             ]),
             _vm._v(" "),
-            _vm._m(0),
+            _c(
+              "div",
+              {
+                staticClass:
+                  "blue-grey flex flex-row space-between card horizontal w-100",
+                staticStyle: { padding: "0 10px" }
+              },
+              [
+                _c(
+                  "p",
+                  { staticClass: "title white-text flex-column-center" },
+                  [_vm._v("Chat rooms")]
+                ),
+                _vm._v(" "),
+                _c(
+                  "a",
+                  {
+                    staticClass: "flex-column-center",
+                    attrs: { href: "#!" },
+                    on: {
+                      click: function($event) {
+                        return _vm.$store.dispatch("openCreateRoomModal")
+                      }
+                    }
+                  },
+                  [
+                    _c(
+                      "i",
+                      {
+                        staticClass: "material-icons clickable white-text",
+                        attrs: { title: "Create Chat Room" }
+                      },
+                      [
+                        _vm._v(
+                          "\n                        add_circle_outline\n                    "
+                        )
+                      ]
+                    )
+                  ]
+                )
+              ]
+            ),
             _vm._v(" "),
             _c(
               "ul",
@@ -11895,63 +11959,12 @@ var render = function() {
               }),
               0
             )
-          ]),
-          _vm._v(" "),
-          _c("li", { staticClass: "collection-item" }, [
-            _c(
-              "a",
-              {
-                attrs: { href: "#!" },
-                on: {
-                  click: function($event) {
-                    return _vm.$store.dispatch("openCreateRoomModal")
-                  }
-                }
-              },
-              [_vm._v("Create A Room")]
-            )
-          ]),
-          _vm._v(" "),
-          _vm._m(1),
-          _vm._v(" "),
-          _vm._m(2)
+          ])
         ])
       : _vm._e()
   ])
 }
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c(
-      "div",
-      {
-        staticClass: "blue-grey card horizontal w-100",
-        staticStyle: { padding: "0 10px" }
-      },
-      [
-        _c("p", { staticClass: "title white-text flex-column-center" }, [
-          _vm._v("Chat rooms")
-        ])
-      ]
-    )
-  },
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("li", [_c("div", { staticClass: "divider" })])
-  },
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("li", [
-      _c("a", { staticClass: "subheader white-text" }, [_vm._v("Subheader")])
-    ])
-  }
-]
+var staticRenderFns = []
 render._withStripped = true
 
 
@@ -12081,12 +12094,7 @@ var render = function() {
             { staticClass: "row mb-0" },
             [
               _c("nav-bar", {
-                attrs: {
-                  sidebar: _vm.sidebar,
-                  currentRoom: _vm.currentRoom,
-                  users: _vm.users,
-                  rooms: _vm.rooms
-                },
+                attrs: { sidebar: _vm.sidebar },
                 on: {
                   "nav-actions": function($event) {
                     return _vm.navActions($event)
@@ -12151,7 +12159,7 @@ var render = function() {
                 }
               },
               [
-                _c("div", { staticClass: "input-field file-field" }, [
+                _c("div", { staticClass: "input-field file-field mb-0" }, [
                   _vm._m(0),
                   _vm._v(" "),
                   _c("div", { staticClass: "file-path-wrapper" }, [
@@ -12199,9 +12207,7 @@ var render = function() {
         ]
       ),
       _vm._v(" "),
-      _c("password-modal", {
-        attrs: { open: _vm.$store.state.passwordModal, room: _vm.room }
-      }),
+      _c("password-modal"),
       _vm._v(" "),
       _c("div", { attrs: { id: "sound" } })
     ],
@@ -12273,7 +12279,7 @@ var render = function() {
                     staticClass: "btn btn-primary",
                     on: {
                       click: function($event) {
-                        return _vm.$store.dispatch("joinRoom", room)
+                        return _vm.$store.dispatch("joinRoomModal", room)
                       }
                     }
                   },
@@ -25559,15 +25565,14 @@ var app = new vue__WEBPACK_IMPORTED_MODULE_0___default.a({
 /*!**************************************************!*\
   !*** ./src/js/component/modal/PasswordModal.vue ***!
   \**************************************************/
-/*! no static exports found */
+/*! exports provided: default */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _PasswordModal_vue_vue_type_template_id_2f06ff5e___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./PasswordModal.vue?vue&type=template&id=2f06ff5e& */ "./src/js/component/modal/PasswordModal.vue?vue&type=template&id=2f06ff5e&");
 /* harmony import */ var _PasswordModal_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PasswordModal.vue?vue&type=script&lang=js& */ "./src/js/component/modal/PasswordModal.vue?vue&type=script&lang=js&");
-/* harmony reexport (unknown) */ for(var __WEBPACK_IMPORT_KEY__ in _PasswordModal_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__) if(__WEBPACK_IMPORT_KEY__ !== 'default') (function(key) { __webpack_require__.d(__webpack_exports__, key, function() { return _PasswordModal_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__[key]; }) }(__WEBPACK_IMPORT_KEY__));
-/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+/* empty/unused harmony star reexport *//* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
 
 
 
@@ -25597,7 +25602,7 @@ component.options.__file = "src/js/component/modal/PasswordModal.vue"
 /*!***************************************************************************!*\
   !*** ./src/js/component/modal/PasswordModal.vue?vue&type=script&lang=js& ***!
   \***************************************************************************/
-/*! no static exports found */
+/*! exports provided: default */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -25964,6 +25969,7 @@ var store = new vuex__WEBPACK_IMPORTED_MODULE_1__["default"].Store({
       id: '',
       name: "Global Room"
     },
+    joinRoom: {},
     passwordModal: false,
     socket: null
   },
@@ -25989,6 +25995,9 @@ var store = new vuex__WEBPACK_IMPORTED_MODULE_1__["default"].Store({
     setCurrentRoom: function setCurrentRoom(state, data) {
       state.currentRoom = data;
     },
+    removeAllChatMessages: function removeAllChatMessages(state) {
+      state.chats = [];
+    },
     setChats: function setChats(state, data) {
       state.chats.push(data);
     },
@@ -25997,56 +26006,65 @@ var store = new vuex__WEBPACK_IMPORTED_MODULE_1__["default"].Store({
     },
     totalUsers: function totalUsers(state, total) {
       state.totalUsers = total;
+    },
+    setJoinRoom: function setJoinRoom(state, data) {
+      state.joinRoom = data;
     }
   },
   actions: {
-    joinRoom: function joinRoom(_ref, data) {
-      var commit = _ref.commit;
+    joinRoomModal: function joinRoomModal(_ref, data) {
+      var dispatch = _ref.dispatch,
+          commit = _ref.commit;
 
-      if (data.password === true) {
-        if (this.join.password == null) {
-          var passwordModal = M.Modal.init(window.document.querySelector('#get-password'));
-          passwordModal.open();
-        } else {
-          $store.dispatch('joinRoom', room);
-        }
+      if (data.password) {
+        data.password = '';
+        commit('setJoinRoom', data);
+        var passwordModal = M.Modal.init(window.document.querySelector('#get-password'));
+        passwordModal.open();
       } else {
-        $store.state.socket.emit('joinRoom', data);
+        data.password = '';
+        dispatch('joinRoom', data);
       }
     },
-    joinedRoom: function joinedRoom(_ref2, data) {
+    joinRoom: function joinRoom(_ref2, data) {
       var commit = _ref2.commit,
-          state = _ref2.state;
-      commit('setCurrentRoom', data); // Close password model after joining
-
+          state = _ref2.state,
+          dispatch = _ref2.dispatch;
+      state.socket.emit('joinRoom', data);
+    },
+    joinedRoom: function joinedRoom(_ref3, data) {
+      var commit = _ref3.commit,
+          state = _ref3.state;
       var passwordModal = M.Modal.init(window.document.querySelector('#get-password'));
       passwordModal.close();
+      commit('removeAllChatMessages');
+      commit('setCurrentRoom', data);
     },
     playSound: function playSound(context, filename) {
       var oggSource = '<source src="/public/sounds/' + filename + '.ogg" type="audio/ogg">';
       var embedSource = '<embed hidden="true" autostart="true" loop="false" src="/public/sounds/' + filename + '.mp3">';
       document.getElementById("sound").innerHTML = '<audio autoplay="autoplay">' + oggSource + embedSource + '</audio>';
     },
-    happy: function happy(_ref3) {
-      var dispatch = _ref3.dispatch;
+    happy: function happy(_ref4) {
+      var dispatch = _ref4.dispatch;
       dispatch('playSound', 'aud');
     },
     leaveRoom: function leaveRoom(context, data) {
-      context, state.socket.emit('leaveRoom', data);
+      context.state.socket.emit('leaveRoom', data);
       var defaultRoom = {
         id: '',
         name: "Global Room"
       };
       context.commit('setCurrentRoom', defaultRoom);
     },
-    createRoom: function createRoom(_ref4, data) {
-      var context = _ref4.context,
-          state = _ref4.state;
+    createRoom: function createRoom(_ref5, data) {
+      var context = _ref5.context,
+          state = _ref5.state;
       state.socket.emit('newRoom', data);
     },
-    passwordModal: function passwordModal(_ref5) {
-      var dispatch = _ref5.dispatch,
-          commit = _ref5.commit;
+    passwordModal: function passwordModal(_ref6) {
+      var dispatch = _ref6.dispatch,
+          commit = _ref6.commit;
       var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
       var modal = M.Modal.init(window.document.querySelector('#get-password'));
 
@@ -26058,8 +26076,8 @@ var store = new vuex__WEBPACK_IMPORTED_MODULE_1__["default"].Store({
         modal.close();
       }
     },
-    openCreateRoomModal: function openCreateRoomModal(_ref6) {
-      var context = _ref6.context;
+    openCreateRoomModal: function openCreateRoomModal(_ref7) {
+      var context = _ref7.context;
       var modal = M.Modal.init(window.document.querySelector('#create-chat'));
       modal.open();
     }

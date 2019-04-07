@@ -13,6 +13,7 @@ export const store = new Vuex.Store({
             id: '',
             name: "Global Room"
         },
+        joinRoom:{},
         passwordModal: false,
         socket: null,
     },
@@ -38,6 +39,9 @@ export const store = new Vuex.Store({
         setCurrentRoom (state, data) {
             state.currentRoom = data;
         },
+        removeAllChatMessages(state) {
+            state.chats = [];
+        },
         setChats (state, data) {
             state.chats.push(data);
         },
@@ -46,27 +50,31 @@ export const store = new Vuex.Store({
         },
         totalUsers (state, total) {
             state.totalUsers = total;
+        },
+        setJoinRoom(state,data) {
+            state.joinRoom = data;
         }
     },
     actions: {
-        joinRoom({ commit },data){
-            if (data.password === true) {
-                if (this.join.password == null) {
-                    let passwordModal = M.Modal.init(window.document.querySelector('#get-password'));			
-                    passwordModal.open();
-                }else{
-                    $store.dispatch('joinRoom',room);
-                }
+        joinRoomModal({dispatch, commit},data){
+            if(data.password){
+                data.password = '';
+                commit('setJoinRoom',data);
+                let passwordModal = M.Modal.init(window.document.querySelector('#get-password'));			
+                passwordModal.open();
             }else{
-                $store.state.socket.emit('joinRoom',data);
+                data.password = '';
+                dispatch('joinRoom',data);
             }
         },
+        joinRoom({ commit,state,dispatch },data){
+            state.socket.emit('joinRoom',data);
+        },
         joinedRoom({commit , state},data){
+            let passwordModal = M.Modal.init(window.document.querySelector('#get-password'));			
+            passwordModal.close();
+            commit('removeAllChatMessages')
             commit('setCurrentRoom',data);
-            
-            // Close password model after joining
-            let passwordModal = M.Modal.init(window.document.querySelector('#get-password'));
-            passwordModal.close();			
         },
         playSound(context,filename){
             var oggSource = '<source src="/public/sounds/'+filename+'.ogg" type="audio/ogg">';
@@ -77,7 +85,7 @@ export const store = new Vuex.Store({
             dispatch('playSound','aud');
         },
         leaveRoom(context,data){
-            context,state.socket.emit('leaveRoom',data);
+            context.state.socket.emit('leaveRoom',data);
             let defaultRoom = {
                 id: '',
                 name: "Global Room"

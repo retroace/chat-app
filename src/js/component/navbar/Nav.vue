@@ -19,9 +19,9 @@
                             <img src="images/yuna.jpg" alt="" class="circle">
                             <span class="title">{{ $store.state.currentRoom.name }}</span>
                             <div>
-                                Online Users: {{ currentUsers.length }}
+                                Online Users: {{ $store.state.users.length }}
                                 <br />
-                                <span class="icon-padding" v-if="user" v-for="user in currentUsers">
+                                <span class="icon-padding" v-if="user" v-for="user in $store.state.users">
                                     {{ user }}
                                 </span>
                             </div>
@@ -45,7 +45,7 @@
                         <i id="happy" class="fa fa-smile-o fa-2x icon-padding clickable" @click="$store.dispatch('happy')"></i>
                     </div>
                     <div class="px-10 pt-0 pb-0 flex hover-red flex-column-center">
-                        <i id="deleteTrash" class="fa fa-trash-o icon-padding clickable fa-2x" @click="$emit('nav-actions','clear-chat-message')"></i> 
+                        <i id="deleteTrash" class="fa fa-trash-o icon-padding clickable fa-2x" @click="$store.commit('removeAllChatMessages')"></i> 
                     </div>
                 </div>
             </div>
@@ -56,7 +56,7 @@
 				<h4>Create A Chat Room</h4>
 				<div class="input-field">
 					<label for="name">Room name</label>
-					<input type="text" v-model="room.name" ref="roomName">
+					<input type="text" v-model="room.name" ref="roomname">
 				</div>
 				<div class="input-field">
 					<label for="passsword">Password</label>
@@ -74,7 +74,7 @@
 <script>
 import mobileNav from './mobileNav.vue';
 export default {
-    props: ['sidebar','currentRoom','users',"rooms"],
+    props: ['sidebar'],
     components:{
         mobileNav
     },
@@ -84,8 +84,6 @@ export default {
             joinedRoom: { 
                 "name": "Global Room", 
             },
-            onlineUsers: null,
-            currentUsers: [],
             room: {
                 name: '',
                 password: ''
@@ -95,7 +93,6 @@ export default {
                 name: null,
                 password: null
             },
-            chatRooms: [],
             domModal: null,
         }
     },
@@ -105,8 +102,17 @@ export default {
     },
     methods: {
         closeModel: function(){
+            if(this.domModal === null){
+                this.domModal = M.Modal.init(window.document.querySelector('#create-chat'));			
+            }
+
             if (this.domModal.isOpen) {
                 this.domModal.close();
+                let data = {
+                    name: '',
+                    password: ''
+                };
+                this.room = data;
             }
         },
         createRoom: function(){
@@ -114,9 +120,10 @@ export default {
                 name: '',
                 password: ''
             };
-            this.$store.dispatch('createRoom',this.room);
-            this.room = data;
-            this.closeModel();
+            if(this.room.name.length > 2 ){
+                this.$store.dispatch('createRoom',this.room);
+                this.closeModel();
+            }
         },
         openModal(){
             if(this.domModal === null){
@@ -124,7 +131,7 @@ export default {
             }
             if (!this.domModal.isOpen) {
                 this.domModal.open();
-                this.$refs.roomName.focus();
+                this.$refs.roomname.focus();
             }
         }
     }

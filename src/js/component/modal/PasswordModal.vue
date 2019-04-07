@@ -1,46 +1,44 @@
 <template>
     <div id="get-password" class="modal">
         <div class="modal-content">
-            <h4>Join Room {{ join.name }}</h4>
+            <h4>Join Room {{ join.name }} ({{ $store.state.joinRoom.name }})</h4>
+            <p class="red-text" v-if="error">{{ error }}</p>
             <div class="input-field">
-                <label for="passsword">Password</label>
-                <input type="password" v-model="join.password">
+                <input type="text" name="name" disabled :value="$store.state.joinRoom.name">
+            </div>
+            <div class="input-field">
+                <label for="password">Password</label>
+                <input type="password" name="password" v-model="join.password">
             </div>
         </div>
         <div class="modal-footer">
             <a href="#!" @click="closeModel()" class="modal-close waves-effect waves-green btn-flat">Close</a>
-            <button class="btn" @click="joinRoom(join)">Join Room</button>
+            <button class="btn" @click="joinRoom()">Join Room</button>
         </div>
     </div>
 </template>
 <script>
 export default {
-    props: ['room'],
     data(){
         return {
-            modal: null,
             join: {
                 name: '',
                 password: ''
-            }
+            },
+            error: ''
         };
+    },
+    mounted(){
+        window.socket.on('joinRoomError', (data) => {
+            this.error = data.message;
+        });
     },
     methods: {
         joinRoom(data){
-            this.join.data = room;
-            if (room.password) {
-                this.join.id = room.id
-                this.join.name = room.name
-
-                if (this.join.password == null) {
-                    this.passwordModal.open();
-                }else{
-                    room.password = this.join.password;
-                    $store.dispatch('joinRoom',room);
-                }
-            }else{
-                $store.dispatch('joinRoom',room);
-            }
+            let room = this.$store.state.joinRoom;
+            room.password = this.join.password;
+            this.$store.commit('setJoinRoom',room);
+            this.$store.dispatch('joinRoom',room);
         }
     }
 }
