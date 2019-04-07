@@ -36,8 +36,9 @@
 				    	<span class="chat-name">{{ chat.name }}</span>
 				    	<span class="teal lighten-2 chat-message">{{ chat.message }}</span>
 			    	</div>
-					<div class="user-tag badge" v-else>
-						{{ chat.message }}
+					<div class="user-tag flex" v-else>
+						<span>>> {{ chat.name }} wants to say : </span>
+						<span class="badge">{{ chat.message }}</span>
 					</div>
 			    </div>
 			</div>
@@ -50,7 +51,7 @@
 							<span>Message</span>
 						</div>	
 						<div class="file-path-wrapper">
-							<textarea  class="materialize-textarea" v-model="message" rows="1" placeholder="Send A Message" @keyup.enter="sendMessage()"></textarea>
+							<textarea id="message" class="materialize-textarea" v-model="message" rows="1" placeholder="Send A Message" @keyup.enter="sendMessage()"></textarea>
 						</div>
 					</div>
 				</form>
@@ -107,12 +108,13 @@
 			unregistered(data){
 				this.socket.on('unregistered', () => {
 					this.checkStorage();
+					this.socket.emit('message', this.chats);
 				});
 			},
 			navActions(data){
 				switch (data) {
 					case 'clear-chat-message':
-						this.chats = []; 
+						this.$store.commit('removeAllChatMessages'); 
 						break;
 					case 'showSidebar':
 						this.sidebar = true; 
@@ -151,22 +153,12 @@
 							break;
 					}
 				});
-					
 			},
 			getOnlineUsers(){
 				this.socket.on('onlineUsers', (data) => {
 					const { total , users } = data;
-					this.onlineUsers = total; 
-					this.users = users;
 					this.$store.commit('setUsers', users);
 				});
-			},
-			chatDisabled(room){
-				if(room.id = this.currentRoom.id)
-				{
-					return 'disabled';
-				}
-				return '';
 			},
 			joinedRoom(){
 				this.socket.on('joinedRoom', (data)=>{
@@ -206,7 +198,6 @@
 				this.socket.on('chatRooms',(room) => {
 					if (room.length > 0) {
 						this.$store.commit('setRooms',room);						
-						this.rooms = room;
 					}
 				});
 			},
@@ -222,11 +213,9 @@
 			setStorage: function(){
 				window.localStorage.setItem('localChatStorage',JSON.stringify(this.user))
 			},
-
 			removeStorage: function(){
 				window.localStorage.removeItem('localChatStorage');
 			},
-
 			playSound: function (filename){
 				// var mp3Source = '<source src="' + filename + '.mp3" type="audio/mpeg">';
 				var oggSource = '<source src="/public/sounds/'+filename+'.ogg" type="audio/ogg">';
@@ -239,6 +228,7 @@
 					{
 						this.anounce(this.message);
 					}else{
+						this.chats = this.message;
 						this.socket.emit('message', this.message);
 					}
 					this.message = '';
@@ -254,8 +244,7 @@
 			},
 			registerUser: function(){
 				if (this.user.name.length > 0) {
-					this.socket.emit('newUser',this.user);
-					this.socket.emit('register', JSON.stringify(this.user));
+					this.socket.emit('newUser',this.$store.state.user);
 					
 					this.socket.on('registered', () => {
 						this.registered = true;
@@ -280,9 +269,6 @@
 					this.chatScroll();
 				});
 			},
-			clearMessage: function(){
-				this.chats = [];
-			},
 			getRoom: function(){
 				this.socket.on('newRoom', (data) => {
 					this.$store.commit('appendRooms', data);
@@ -291,11 +277,11 @@
 			anounce(data){
 				this.socket.emit('action',{
 					name: "sayInChat", 
-					message: this.user.name+ " wants to say : "+ data.substr(10)
+					message: data.substr(10)
 				});
 			},
 			filterEmojiFromText(text){
-				var emojis = [
+				var emojis = [ 
 					[":D","😂"],
 					[":)","🙂"],
 					[":))","😀"],
@@ -318,8 +304,47 @@
 					[":O.O","😶"],
 					[":-_-","😑"],
 					[":-(","😞"],
-					[":-O|","😱"]
+					[":-O|","😱"],
+					[":ED","😈"],
+					[":OP","😛"],
+					[":E-)","😇"],
+					[":)-D","🙃"],
+					[":OO","😳"],
+					[":H)","🤗"],
+					[":L(","😚"],
+					[":L<","😙"],
+					[":>(","😒"],
+					[":TU","🤔"],
+					[":A","👽"],
+					[":G","👻"],
+					[":S","😪"],
+					[":Z","😴"],
+					[":S<","🤡"],
+					[":GP","🤢"],
+					[":flu","😷"],
+					[":A(","😡"],
+					[":AO(","😠"],
+					[":O^O","🙄"],
+					[":>>","😔"],
+					[":><","😖"],
+					[":'D","😓"],
+					[":'D","😢"],
+					[":|O|","😭"],
+					[":shock","😨"],
+					[":cryshock","😰"],
+					[":bioshock","😱"],
+					[":tired","😫"],
+					[":verytired","😩"],
+					[":closeeye","😣"],
+					[":devil3","👿"],
+					[":devil","👹"],
+					[":devil2","👺"],
+					[":hat","🤠"],
+					[":headbandage","🤕"],
+					[":sneez","🤧"],
+					[":notalk","😐"],
 				];
+
 				// Regex start with whitespace but break in whitespace
 				// /(\s+:\S*)/g
 				text = " "+text.trim();
@@ -334,7 +359,14 @@
 				});
 			}
 		},
-		
+		watch:{
+			message(){
+				// Making tagging feature on @ keypress
+				// if(this.message[this.message.length-1] == '@') {
+
+				// }
+			}
+		}
 
 	});
 </script>

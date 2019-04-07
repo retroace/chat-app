@@ -32,22 +32,47 @@ var socketUserCount = {
 
 	}
 };
+var usersCountByRoom = {};
+var usersByRoom = {};
 var globalRoom = {
 	id: '1saw-dk2jfie-skjier4',
 	name: "global",
 	totalUser: 0
 };
 
-var users = [];
-
-const connected = (data) => {
-	
+const filterOutLeftUser = (haystack,removeNeedle) => {
+	return haystack.filter( (item,index) => {
+		return (item.id == removeNeedle.id) ? false : true;
+	});
 };
-var users = [];
+
+const sendTotalNameAndUser = (room,data,io) => {
+	let names = data.filter((item,index) => {
+		return (item.name.length > 0) ? true : false;
+	}).map((item,index) => {
+		return item.name;
+	});
+	
+	io.in(room).emit('onlineUsers',{
+		total: names.length,
+		users: names
+	});
+};
+
 const socketConnection = (socket,io) => {
 	var currentRoom = globalRoom;
 	socketUserCount.total++;
-	socketUserCount.room[currentRoom.id]++;
+	
+	if(usersByRoom[currentRoom.id] == undefined){
+		usersByRoom[currentRoom.id] = [];
+	}
+	
+	if(usersCountByRoom[currentRoom.id] == undefined){
+		usersCountByRoom[currentRoom.id] = 1;
+	}else{
+		usersCountByRoom[currentRoom.id]++;
+	}
+	
 	socket.join(currentRoom.id);
 
 	// Socket has been connected 
@@ -64,6 +89,7 @@ const socketConnection = (socket,io) => {
 			name: socket.name,
 			message: data
 		};
+
 		if(socket.name == undefined){
 			socket.emit('unregistered');
 		}else{
@@ -94,24 +120,37 @@ const socketConnection = (socket,io) => {
 		}
 	});
 
+	socket.on('error', (error) => {
+		console.log(error);
+	});
+	
 	// User Leaves A Room
 	socket.on('leaveRoom',(data) => {
 		socket.leave(data.id);
+		usersByRoom[currentRoom.id] = filterOutLeftUser(usersByRoom[currentRoom.id], socket);
+		sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
 		
 		let user = {
 			name : socket.name
 		};
-
 		// User left the chat notice
 		io.in( data.id ).emit('userLeft',user);
+		usersCountByRoom[currentRoom.id]--;
 		
 		// User joins global room
-		currentRoom = globalRoom.id;
+		currentRoom = globalRoom;
 		socket.join(globalRoom.id);
 		socket.emit('joinedRoom',{
 			id: globalRoom.id,
 			name: 'Global Room'
 		});
+		usersByRoom[currentRoom.id].push({
+			id: socket.id,
+			name: socket.name
+		});
+		sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
+		usersCountByRoom[currentRoom.id]++;
+		
 	});
 
 	// newUser Comes
@@ -128,42 +167,13 @@ const socketConnection = (socket,io) => {
 		
 		// Push into chat Users
 		chatUsers.push(userData);
+		usersByRoom[currentRoom.id].push(userData);
 		
 		// Emit registered user
 		socket.emit('registered', message);
 		
 		// Emit All User Name
-		let names = JSON.parse(JSON.stringify(chatUsers));
-		names = names.filter((item,index) => {
-			return (item.name.length > 0) ? true : false;
-		}).map((item,index) => {
-			return item.name;
-		});
-		
-		io.emit('onlineUsers',{
-			total: socketUserCount.total,
-			users: names
-		});
-		io.to(global.id).emit('userConnected',{name: socket.name});
-	});
-
-	// User registers same as a new User
-	socket.on('register',(user) => {
-		var user = JSON.parse(user);
-		socket.name = user.name;
-		var userIsInArray = false;
-		
-		for (var i = 0; i < chatUsers.length; i++) {
-			if (chatUsers[i].id == socket.id) {
-				userIsInArray = true;
-			}
-		}
-		
-		if (userIsInArray == false) {
-			chatUsers.push(user);
-		}
-
-		io.emit('totalUsers',chatUsers.length);
+		sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
 		io.to(global.id).emit('userConnected',{name: socket.name});
 	});
 
@@ -178,16 +188,26 @@ const socketConnection = (socket,io) => {
 				name: socket.name
 			}
 		};
-
-		// Change Current room id
-		socketUserCount.room[currentRoom.id]--;
+		usersCountByRoom[currentRoom.id]--;
+		usersByRoom[currentRoom.id] = filterOutLeftUser(usersByRoom[currentRoom.id],socket);
 		socket.join(roomDetail.id);
 		chatRoom.push(roomDetail);
+		sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
 		
+		// Change Current room id
 		socket.leave(currentRoom.id);
 		currentRoom = roomDetail;
 		socketUserCount.room[currentRoom.id] = 1;
 		
+		if(usersByRoom[currentRoom.id] == undefined){
+			usersByRoom[currentRoom.id] = [];
+		}
+		
+		if(usersCountByRoom[currentRoom.id] == undefined){
+			usersCountByRoom[currentRoom.id] = 1;
+		}else{
+			usersCountByRoom[currentRoom.id]++;
+		}
 		
 		let hasPassword = (roomDetail.password != undefined && roomDetail.password.length > 1) ? true: false; 
 		let newRoomDetail = {
@@ -198,6 +218,11 @@ const socketConnection = (socket,io) => {
 		
 		socket.emit("joinedRoom", newRoomDetail);
 		io.emit('newRoom',newRoomDetail);
+		usersByRoom[currentRoom.id].push({
+			id: socket.id,
+			name: socket.name
+		});
+		sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
 	});
 	
 	// User Wants To Join A Room
@@ -207,7 +232,7 @@ const socketConnection = (socket,io) => {
 			name: roomData.name,
 			password: roomData.password
 		};
-
+		
 		// The room user wanted to enter
 		var wantedRoom = chatRoom.filter( (item,index) =>{
 			if (item.id == roomData.id) {
@@ -222,11 +247,17 @@ const socketConnection = (socket,io) => {
 			if (wantedRoom.password == '' || wantedRoom.password == false) {
 				socketUserCount.room[currentRoom.id]--;
 				socket.leave(currentRoom.id);
+				usersByRoom[currentRoom.id] = filterOutLeftUser(usersByRoom[currentRoom.id], socket);
+				sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
 				
 				currentRoom = wantedRoom;
+				usersByRoom[currentRoom.id].push({
+					id: socket.id,
+					name: socket.name
+				});
+
 				socket.join(wantedRoom.id);
 				socket.emit("joinedRoom", wantedRoom);
-				socketUserCount.room[currentRoom.id]++;
 				
 				let user = {
 					name: socket.name
@@ -245,13 +276,13 @@ const socketConnection = (socket,io) => {
 						name: wantedRoom.name,
 						password: true
 					};
-					socketUserCount.room[currentRoom.id]++;
 					
 					socket.emit("joinedRoom", newWantedRoom);
 				}else{
 					socket.emit("joinRoomError", {message: "Incorrect password"});
 				}
 			}
+			sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
 		}else{
 			socket.on('joinRoomError',roomData);
 		}
@@ -260,8 +291,13 @@ const socketConnection = (socket,io) => {
 	// User Leaves Chat
 	socket.on('disconnect', (user) => {
 		socketUserCount.total--;
+
+		usersCountByRoom[currentRoom.id]--;
+		// Filter disconnected user from the room
+		usersByRoom[currentRoom.id] = filterOutLeftUser(usersByRoom[currentRoom.id], socket);
+		sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
 		
-		let onlineUser = users.filter((item,index) => {
+		let onlineUser = chatUsers.filter((item,index) => {
 			if(item == socket.id){
 				return false;
 			}
@@ -274,10 +310,11 @@ const socketConnection = (socket,io) => {
 			} 
 			return true;
 		});
+		sendTotalNameAndUser(currentRoom.id,usersByRoom[currentRoom.id],io);
 		
 		users = onlineUser;
 		
-		io.emit('totalUsers',chatUsers.length);
+		io.emit('totalUsers',usersCountByRoom[currentRoom.id].length);
 		if (socket.name != undefined) {
 			io.to(currentRoom.id).emit('userDisconnected', {name: socket.name});
 		}

@@ -518,6 +518,7 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
@@ -565,12 +566,14 @@ __webpack_require__.r(__webpack_exports__);
 
       this.socket.on('unregistered', function () {
         _this.checkStorage();
+
+        _this.socket.emit('message', _this.chats);
       });
     },
     navActions: function navActions(data) {
       switch (data) {
         case 'clear-chat-message':
-          this.chats = [];
+          this.$store.commit('removeAllChatMessages');
           break;
 
         case 'showSidebar':
@@ -620,18 +623,9 @@ __webpack_require__.r(__webpack_exports__);
       this.socket.on('onlineUsers', function (data) {
         var total = data.total,
             users = data.users;
-        _this3.onlineUsers = total;
-        _this3.users = users;
 
         _this3.$store.commit('setUsers', users);
       });
-    },
-    chatDisabled: function chatDisabled(room) {
-      if (room.id = this.currentRoom.id) {
-        return 'disabled';
-      }
-
-      return '';
     },
     joinedRoom: function joinedRoom() {
       var _this4 = this;
@@ -675,8 +669,6 @@ __webpack_require__.r(__webpack_exports__);
       this.socket.on('chatRooms', function (room) {
         if (room.length > 0) {
           _this6.$store.commit('setRooms', room);
-
-          _this6.rooms = room;
         }
       });
     },
@@ -707,6 +699,7 @@ __webpack_require__.r(__webpack_exports__);
         if (this.message.trim().substr(0, 10) == "\\sayInChat") {
           this.anounce(this.message);
         } else {
+          this.chats = this.message;
           this.socket.emit('message', this.message);
         }
 
@@ -725,8 +718,7 @@ __webpack_require__.r(__webpack_exports__);
       var _this7 = this;
 
       if (this.user.name.length > 0) {
-        this.socket.emit('newUser', this.user);
-        this.socket.emit('register', JSON.stringify(this.user));
+        this.socket.emit('newUser', this.$store.state.user);
         this.socket.on('registered', function () {
           _this7.registered = true;
 
@@ -753,9 +745,6 @@ __webpack_require__.r(__webpack_exports__);
         _this8.chatScroll();
       });
     },
-    clearMessage: function clearMessage() {
-      this.chats = [];
-    },
     getRoom: function getRoom() {
       var _this9 = this;
 
@@ -766,11 +755,11 @@ __webpack_require__.r(__webpack_exports__);
     anounce: function anounce(data) {
       this.socket.emit('action', {
         name: "sayInChat",
-        message: this.user.name + " wants to say : " + data.substr(10)
+        message: data.substr(10)
       });
     },
     filterEmojiFromText: function filterEmojiFromText(text) {
-      var emojis = [[":D", "😂"], [":)", "🙂"], [":))", "😀"], [":P", "😜"], [":>P<", "😝"], [":><", "😄"], [">:(", "😆"], [":'", "😅"], ["", "🤣"], ["^_^", "😊"], [":.).", "️😌"], [":.<", "😉"], [":`)", "😏"], [":LO", "😍"], [":cl", "😘"], [":c", "😗"], [":()", "🤑"], [":O-O", "😎"], [":O-|O", "🤓"], [":O.O", "😶"], [":-_-", "😑"], [":-(", "😞"], [":-O|", "😱"]]; // Regex start with whitespace but break in whitespace
+      var emojis = [[":D", "😂"], [":)", "🙂"], [":))", "😀"], [":P", "😜"], [":>P<", "😝"], [":><", "😄"], [">:(", "😆"], [":'", "😅"], ["", "🤣"], ["^_^", "😊"], [":.).", "️😌"], [":.<", "😉"], [":`)", "😏"], [":LO", "😍"], [":cl", "😘"], [":c", "😗"], [":()", "🤑"], [":O-O", "😎"], [":O-|O", "🤓"], [":O.O", "😶"], [":-_-", "😑"], [":-(", "😞"], [":-O|", "😱"], [":ED", "😈"], [":OP", "😛"], [":E-)", "😇"], [":)-D", "🙃"], [":OO", "😳"], [":H)", "🤗"], [":L(", "😚"], [":L<", "😙"], [":>(", "😒"], [":TU", "🤔"], [":A", "👽"], [":G", "👻"], [":S", "😪"], [":Z", "😴"], [":S<", "🤡"], [":GP", "🤢"], [":flu", "😷"], [":A(", "😡"], [":AO(", "😠"], [":O^O", "🙄"], [":>>", "😔"], [":><", "😖"], [":'D", "😓"], [":'D", "😢"], [":|O|", "😭"], [":shock", "😨"], [":cryshock", "😰"], [":bioshock", "😱"], [":tired", "😫"], [":verytired", "😩"], [":closeeye", "😣"], [":devil3", "👿"], [":devil", "👹"], [":devil2", "👺"], [":hat", "🤠"], [":headbandage", "🤕"], [":sneez", "🤧"], [":notalk", "😐"]]; // Regex start with whitespace but break in whitespace
       // /(\s+:\S*)/g
 
       text = " " + text.trim();
@@ -783,6 +772,12 @@ __webpack_require__.r(__webpack_exports__);
 
         return data;
       });
+    }
+  },
+  watch: {
+    message: function message() {// Making tagging feature on @ keypress
+      // if(this.message[this.message.length-1] == '@') {
+      // }
     }
   }
 });
@@ -12137,10 +12132,14 @@ var render = function() {
                         [_vm._v(_vm._s(chat.message))]
                       )
                     ])
-                  : _c("div", { staticClass: "user-tag badge" }, [
-                      _vm._v(
-                        "\n\t\t\t\t\t" + _vm._s(chat.message) + "\n\t\t\t\t"
-                      )
+                  : _c("div", { staticClass: "user-tag flex" }, [
+                      _c("span", [
+                        _vm._v(">> " + _vm._s(chat.name) + " wants to say : ")
+                      ]),
+                      _vm._v(" "),
+                      _c("span", { staticClass: "badge" }, [
+                        _vm._v(_vm._s(chat.message))
+                      ])
                     ])
               ])
             }),
@@ -12173,7 +12172,11 @@ var render = function() {
                         }
                       ],
                       staticClass: "materialize-textarea",
-                      attrs: { rows: "1", placeholder: "Send A Message" },
+                      attrs: {
+                        id: "message",
+                        rows: "1",
+                        placeholder: "Send A Message"
+                      },
                       domProps: { value: _vm.message },
                       on: {
                         keyup: function($event) {
